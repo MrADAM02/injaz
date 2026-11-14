@@ -1,6 +1,8 @@
 using Injaz.Application.Common;
 using Injaz.Application.Common.Exceptions;
+using Injaz.Application.Features.Activity;
 using Injaz.Application.Features.Boards;
+using Injaz.Domain.Activity;
 using Injaz.Application.Messaging;
 using Injaz.Application.Persistence;
 using Injaz.Application.Security;
@@ -35,7 +37,7 @@ internal sealed class CreateListValidator : IValidator<CreateList>
         ListRules.Title(context, nameof(request.Title), request.Title);
 }
 
-internal sealed class CreateListHandler(IAppDbContext db, TimeProvider clock) : ICommandHandler<CreateList, ListDto>
+internal sealed class CreateListHandler(IAppDbContext db, IActivityLog activity, TimeProvider clock) : ICommandHandler<CreateList, ListDto>
 {
     public async Task<ListDto> HandleAsync(CreateList command, CancellationToken cancellationToken)
     {
@@ -44,6 +46,7 @@ internal sealed class CreateListHandler(IAppDbContext db, TimeProvider clock) : 
 
         var list = BoardList.Create(command.BoardId, command.Title!, rank, clock.GetUtcNow());
         db.BoardLists.Add(list);
+        activity.Record(ActivityTypes.ListCreated, list.BoardId, data: new { listId = list.Id, title = list.Title });
         return ListDto.From(list);
     }
 }
@@ -73,20 +76,29 @@ internal sealed class UpdateListValidator : IValidator<UpdateList>
     }
 }
 
-internal sealed class UpdateListHandler(IAppDbContext db) : ICommandHandler<UpdateList, ListDto>
+internal sealed class UpdateListHandler(IAppDbContext db, IActivityLog activity) : ICommandHandler<UpdateList, ListDto>
 {
     public async Task<ListDto> HandleAsync(UpdateList command, CancellationToken cancellationToken)
     {
         var list = await db.LoadListAsync(command.ListId, cancellationToken);
+        var (oldTitle, wasArchived) = (list.Title, list.IsArchived);
 
         if (command.Title.HasValue)
         {
             list.Rename(command.Title.Value!);
+            if (list.Title != oldTitle)
+            {
+                activity.Record(ActivityTypes.ListRenamed, list.BoardId, data: new { listId = list.Id, from = oldTitle, to = list.Title });
+            }
         }
 
         if (command.IsArchived.HasValue)
         {
             list.SetArchived(command.IsArchived.Value!.Value);
+            if (list.IsArchived != wasArchived)
+            {
+                activity.Record(list.IsArchived ? ActivityTypes.ListArchived : ActivityTypes.ListRestored, list.BoardId, data: new { listId = list.Id, title = list.Title });
+            }
         }
 
         return ListDto.From(list);
@@ -126,11 +138,13 @@ public sealed record DeleteList(Guid ListId) : ICommand, IAuthorizedRequest
     public Permission Permission => Permission.DeleteContent;
 }
 
-internal sealed class DeleteListHandler(IAppDbContext db) : ICommandHandler<DeleteList, Unit>
+internal sealed class DeleteListHandler(IAppDbContext db, IActivityLog activity) : ICommandHandler<DeleteList, Unit>
 {
     public async Task<Unit> HandleAsync(DeleteList command, CancellationToken cancellationToken)
     {
-        db.BoardLists.Remove(await db.LoadListAsync(command.ListId, cancellationToken));
+        var list = await db.LoadListAsync(command.ListId, cancellationToken);
+        db.BoardLists.Remove(list);
+        activity.Record(ActivityTypes.ListDeleted, list.BoardId, data: new { listId = list.Id, title = list.Title });
         return Unit.Value;
     }
 }

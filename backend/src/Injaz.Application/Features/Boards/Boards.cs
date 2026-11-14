@@ -1,5 +1,8 @@
 using Injaz.Application.Common;
 using Injaz.Application.Common.Exceptions;
+using Injaz.Application.Features.Activity;
+using Injaz.Application.Features.Cards;
+using Injaz.Domain.Activity;
 using Injaz.Application.Messaging;
 using Injaz.Application.Persistence;
 using Injaz.Application.Security;
@@ -45,13 +48,14 @@ internal sealed class CreateBoardValidator : IValidator<CreateBoard>
     }
 }
 
-internal sealed class CreateBoardHandler(IAppDbContext db, ICurrentUser currentUser, TimeProvider clock)
+internal sealed class CreateBoardHandler(IAppDbContext db, ICurrentUser currentUser, IActivityLog activity, TimeProvider clock)
     : ICommandHandler<CreateBoard, BoardSummaryDto>
 {
     public Task<BoardSummaryDto> HandleAsync(CreateBoard command, CancellationToken cancellationToken)
     {
         var board = Board.Create(command.WorkspaceId, command.Title!, command.Description, command.Color, currentUser.UserId, clock.GetUtcNow());
         db.Boards.Add(board);
+        activity.Record(ActivityTypes.BoardCreated, board.Id, data: new { title = board.Title });
         return Task.FromResult(BoardSummaryDto.From(board));
     }
 }
@@ -107,17 +111,7 @@ internal sealed class GetBoardHandler(IAppDbContext db, ICurrentAccess currentAc
             .Where(c => c.BoardId == board.Id && !c.IsArchived)
             .OrderBy(c => c.Rank)
             .ThenBy(c => c.Id)
-            .Select(c => new CardSummaryDto(
-                c.Id,
-                c.ListId,
-                c.Title,
-                c.Rank,
-                c.DueAt,
-                c.Priority,
-                c.CompletedAt,
-                c.Description != null,
-                c.Labels.Select(l => l.LabelId).ToList(),
-                c.Assignees.Select(a => a.UserId).ToList()))
+            .Select(CardQueries.Summary(db))
             .ToListAsync(cancellationToken);
 
         var labels = await db.Labels
@@ -184,16 +178,21 @@ internal sealed class UpdateBoardValidator : IValidator<UpdateBoard>
     }
 }
 
-internal sealed class UpdateBoardHandler(IAppDbContext db, TimeProvider clock) : ICommandHandler<UpdateBoard, BoardSummaryDto>
+internal sealed class UpdateBoardHandler(IAppDbContext db, IActivityLog activity, TimeProvider clock) : ICommandHandler<UpdateBoard, BoardSummaryDto>
 {
     public async Task<BoardSummaryDto> HandleAsync(UpdateBoard command, CancellationToken cancellationToken)
     {
         var board = await db.LoadBoardAsync(command.BoardId, cancellationToken);
         var now = clock.GetUtcNow();
+        var (oldTitle, wasArchived) = (board.Title, board.IsArchived);
 
         if (command.Title.HasValue)
         {
             board.Rename(command.Title.Value!, now);
+            if (board.Title != oldTitle)
+            {
+                activity.Record(ActivityTypes.BoardRenamed, board.Id, data: new { from = oldTitle, to = board.Title });
+            }
         }
 
         if (command.Description.HasValue)
@@ -209,6 +208,10 @@ internal sealed class UpdateBoardHandler(IAppDbContext db, TimeProvider clock) :
         if (command.IsArchived.HasValue)
         {
             board.SetArchived(command.IsArchived.Value!.Value, now);
+            if (board.IsArchived != wasArchived)
+            {
+                activity.Record(board.IsArchived ? ActivityTypes.BoardArchived : ActivityTypes.BoardRestored, board.Id, data: new { title = board.Title });
+            }
         }
 
         return BoardSummaryDto.From(board);

@@ -148,7 +148,7 @@ exists. Members whose role is too low get `403 auth.forbidden`.
 |---|:-:|:-:|:-:|:-:|---|
 | `View` | ✓ | ✓ | ✓ | ✓ | read workspace, members, boards, cards, activity; leave the workspace |
 | `EditContent` | | ✓ | ✓ | ✓ | lists, cards, labels, checklists, comments; create/rename/archive boards |
-| `DeleteContent` | | | ✓ | ✓ | hard-delete boards/lists/cards; delete others' comments *(comments: phase 5)* |
+| `DeleteContent` | | | ✓ | ✓ | hard-delete boards/lists/cards; delete others' comments |
 | `ManageMembers` | | | ✓ | ✓ | invite, change roles (never to/from owner), remove members |
 | `ManageWorkspace` | | | ✓ | ✓ | rename |
 | `OwnWorkspace` | | | | ✓ | delete workspace, transfer ownership |
@@ -246,3 +246,78 @@ ordinal string order. Order is `(rank, id)`.
 
 **Concurrent edits.** If two people move or edit the same card at once, the `xmin` concurrency check stops the
 second change and returns `409 conflict.concurrency`.
+
+## Checklists, comments, activity, My Tasks & search
+
+### Endpoints
+
+| Endpoint | Permission |
+|---|---|
+| `POST /api/cards/{id}/checklist` `{ text }` (appended) | EditContent |
+| `PATCH /api/checklist-items/{id}` `{ text?, isDone? }` · `POST …/move` `{ afterId?, beforeId? }` · `DELETE` | EditContent |
+| `GET /api/cards/{id}/comments?cursor=&limit=` (newest first) | View |
+| `POST /api/cards/{id}/comments` `{ body }` | EditContent |
+| `PATCH /api/comments/{id}` `{ body }` | author only |
+| `DELETE /api/comments/{id}` | author, or DeleteContent for anyone's |
+| `GET /api/boards/{id}/activity?cursor=&limit=` · `GET /api/cards/{id}/activity?…` | View |
+| `GET /api/boards/{id}/cards?q=&labelIds=&assigneeIds=&due=&tz=&archived=&cursor=&limit=` | View |
+| `GET /api/me/tasks?due=&priority=&workspaceId=&includeCompleted=&tz=&cursor=&limit=` | signed in |
+
+**Card detail and tiles.**
+- `GET /api/cards/{id}` now includes the checklist and a comment count.
+- Card tiles (board, My Tasks, search) show badges: `checklistDone`, `checklistTotal` and `commentCount`.
+- All tiles come from one shared SQL projection, so they look the same everywhere.
+
+### Pagination
+
+Lists that can grow (comments, activity, search, My Tasks) use **keyset** pagination: `{ items, nextCursor }`.
+Pass `nextCursor` back as `?cursor=` to get the next page. `limit` is 1–100 (default 30). Unlike offsets,
+pages stay stable while new rows are being added.
+
+### Activity log
+
+- **Written inside the same transaction as the change**, through `IActivityLog`. A rolled-back command never
+  leaves an entry, and a committed one always has its entry.
+- **Each entry has** a `type` (for example `card.moved`), an `actor`, and a small `data` JSON object holding
+  names and titles *as they were*. The feed therefore still reads correctly after things are renamed or deleted.
+- **Deleting a card** keeps its history on the board: the entries lose their `cardId` reference but stay in
+  the feed.
+- **Only real changes are logged.**
+  - Reordering cards inside a list is skipped.
+  - Repeating an idempotent PUT/DELETE logs nothing.
+  - A PATCH logs one entry per field that actually changed.
+- **Ordering:** entries recorded by the same request get strictly increasing timestamps, so the feed always
+  shows them in the order they were recorded.
+
+**Types:**
+- `board.created|renamed|archived|restored`
+- `list.created|renamed|archived|restored|deleted`
+- `card.created|renamed|descriptionChanged|dueChanged|priorityChanged|completed|reopened|archived|restored|moved|deleted|assigned|unassigned|labelAdded|labelRemoved`
+- `checklist.itemAdded|itemCompleted|itemReopened|itemDeleted`
+- `comment.added`
+
+### My Tasks & due buckets
+
+My Tasks shows the open cards assigned to you, across all your workspaces. Cards on archived lists or boards
+are excluded. They are sorted soonest due first, with undated cards last.
+
+`due` is one of:
+
+| Bucket | Meaning |
+|---|---|
+| `overdue` | due before now and not completed |
+| `today` | due during your current calendar day |
+| `week` | due from the start of today through the next 7 days |
+| `none` | no due date |
+
+"Today" depends on where you are, so the client sends its IANA time zone (`tz=Asia/Riyadh`). The default is
+UTC. The runtime image includes tzdata.
+
+### Board search
+
+Search matches text in the title or description (substring, case-insensitive). It also filters by *any of*
+`labelIds` / `assigneeIds`, by a due bucket, and by open vs archived (`archived=true` returns only archived
+cards). Results are ordered most recently updated first.
+
+The board screen filters its already-loaded cards in the browser. This endpoint covers what that payload
+doesn't include: text inside descriptions, and archived cards.

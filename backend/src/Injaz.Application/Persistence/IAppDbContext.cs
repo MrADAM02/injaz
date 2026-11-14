@@ -1,3 +1,4 @@
+using Injaz.Domain.Activity;
 using Injaz.Domain.Boards;
 using Injaz.Domain.Cards;
 using Injaz.Domain.Users;
@@ -30,4 +31,10 @@ public interface IAppDbContext : IUnitOfWork
     DbSet<Label> Labels { get; }
 
     DbSet<Card> Cards { get; }
+
+    DbSet<ChecklistItem> ChecklistItems { get; }
+
+    DbSet<Comment> Comments { get; }
+
+    DbSet<ActivityEntry> Activity { get; }
 }

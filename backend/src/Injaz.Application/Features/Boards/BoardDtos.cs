@@ -40,7 +40,7 @@ public sealed record ListDto(Guid Id, Guid BoardId, string Title, string Rank, b
     }
 }
 
-/// <summary>What a card tile shows. The full card (description, …) comes from <c>GET /api/cards/{id}</c>.</summary>
+/// <summary>What a card tile shows. The full card (description, checklist, …) comes from <c>GET /api/cards/{id}</c>.</summary>
 public sealed record CardSummaryDto(
     Guid Id,
     Guid ListId,
@@ -51,9 +51,13 @@ public sealed record CardSummaryDto(
     DateTimeOffset? CompletedAt,
     bool HasDescription,
     IReadOnlyList<Guid> LabelIds,
-    IReadOnlyList<Guid> AssigneeIds)
+    IReadOnlyList<Guid> AssigneeIds,
+    int ChecklistDone,
+    int ChecklistTotal,
+    int CommentCount)
 {
-    public static CardSummaryDto From(Card card)
+    /// <summary>From a tracked entity (commands); listing queries use <c>CardQueries.Summary</c> instead.</summary>
+    public static CardSummaryDto From(Card card, Cards.CardBadges badges)
     {
         ArgumentNullException.ThrowIfNull(card);
         return new(
@@ -66,7 +70,10 @@ public sealed record CardSummaryDto(
             card.CompletedAt,
             card.Description is not null,
             [.. card.Labels.Select(l => l.LabelId)],
-            [.. card.Assignees.Select(a => a.UserId)]);
+            [.. card.Assignees.Select(a => a.UserId)],
+            badges.ChecklistDone,
+            badges.ChecklistTotal,
+            badges.CommentCount);
     }
 }
 

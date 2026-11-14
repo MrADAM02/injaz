@@ -1,5 +1,6 @@
 using Injaz.Application.Common.Exceptions;
 using Injaz.Application.Persistence;
+using Injaz.Domain.Activity;
 using Injaz.Domain.Boards;
 using Injaz.Domain.Cards;
 using Injaz.Domain.Users;
@@ -28,6 +29,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Label> Labels => Set<Label>();
 
     public DbSet<Card> Cards => Set<Card>();
+
+    public DbSet<ChecklistItem> ChecklistItems => Set<ChecklistItem>();
+
+    public DbSet<Comment> Comments => Set<Comment>();
+
+    public DbSet<ActivityEntry> Activity => Set<ActivityEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

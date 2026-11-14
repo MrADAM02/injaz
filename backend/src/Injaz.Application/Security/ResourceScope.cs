@@ -8,6 +8,8 @@ public enum ScopeKind
     List,
     Card,
     Label,
+    ChecklistItem,
+    Comment,
 }
 
 /// <summary>The resource a request targets. The authorizer resolves it to a workspace and the caller's role there.</summary>
@@ -23,8 +25,16 @@ public readonly record struct ResourceScope(ScopeKind Kind, Guid Id)
 
     public static ResourceScope Label(Guid labelId) => new(ScopeKind.Label, labelId);
 
+    public static ResourceScope ChecklistItem(Guid itemId) => new(ScopeKind.ChecklistItem, itemId);
+
+    public static ResourceScope Comment(Guid commentId) => new(ScopeKind.Comment, commentId);
+
     /// <summary>Resource name used in <c>{resource}.notFound</c> codes.</summary>
-    public string ResourceName => Kind.ToString().ToLowerInvariant();
+    public string ResourceName => Kind switch
+    {
+        ScopeKind.ChecklistItem => "checklistItem",
+        _ => Kind.ToString().ToLowerInvariant(),
+    };
 }
 
 /// <summary>The caller's membership in the workspace a request was authorized against.</summary>

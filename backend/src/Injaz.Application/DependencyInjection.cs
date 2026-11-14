@@ -1,4 +1,5 @@
 using System.Reflection;
+using Injaz.Application.Features.Activity;
 using Injaz.Application.Features.Auth;
 using Injaz.Application.Features.Invitations;
 using Injaz.Application.Messaging;
@@ -27,6 +28,7 @@ public static class DependencyInjection
         services.AddOptions<AuthOptions>();
         services.AddOptions<InvitationOptions>();
         services.AddScoped<SessionIssuer>();
+        services.AddScoped<IActivityLog, ActivityLog>();
         return services;
     }
 

@@ -22,6 +22,12 @@ internal sealed class AccessScopeResolver(IAppDbContext db) : IAccessScopeResolv
             ScopeKind.List => db.BoardLists.Where(l => l.Id == id).Join(db.Boards, l => l.BoardId, b => b.Id, (_, b) => b.WorkspaceId),
             ScopeKind.Card => db.Cards.Where(c => c.Id == id).Join(db.Boards, c => c.BoardId, b => b.Id, (_, b) => b.WorkspaceId),
             ScopeKind.Label => db.Labels.Where(l => l.Id == id).Join(db.Boards, l => l.BoardId, b => b.Id, (_, b) => b.WorkspaceId),
+            ScopeKind.ChecklistItem => db.ChecklistItems.Where(i => i.Id == id)
+                .Join(db.Cards, i => i.CardId, c => c.Id, (_, c) => c.BoardId)
+                .Join(db.Boards, boardId => boardId, b => b.Id, (_, b) => b.WorkspaceId),
+            ScopeKind.Comment => db.Comments.Where(x => x.Id == id)
+                .Join(db.Cards, x => x.CardId, c => c.Id, (_, c) => c.BoardId)
+                .Join(db.Boards, boardId => boardId, b => b.Id, (_, b) => b.WorkspaceId),
             _ => throw new ArgumentOutOfRangeException(nameof(scope), scope.Kind, "Unsupported scope kind."),
         };
 

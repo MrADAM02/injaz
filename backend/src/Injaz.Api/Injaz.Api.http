@@ -127,3 +127,35 @@ Content-Type: application/json
 ### The whole board
 GET {{api}}/api/boards/{{boardId}}
 Authorization: Bearer {{accessToken}}
+
+### ---------- Checklist, comments, activity, tasks, search ----------
+
+### Add a checklist item
+POST {{api}}/api/cards/{{cardId}}/checklist
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "text": "Outline the sections" }
+
+### Comment
+POST {{api}}/api/cards/{{cardId}}/comments
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "body": "Draft is in the shared folder." }
+
+### Comments (newest first; pass nextCursor as ?cursor=)
+GET {{api}}/api/cards/{{cardId}}/comments?limit=20
+Authorization: Bearer {{accessToken}}
+
+### Board activity
+GET {{api}}/api/boards/{{boardId}}/activity
+Authorization: Bearer {{accessToken}}
+
+### My tasks due today (in Riyadh)
+GET {{api}}/api/me/tasks?due=today&tz=Asia/Riyadh
+Authorization: Bearer {{accessToken}}
+
+### Search a board
+GET {{api}}/api/boards/{{boardId}}/cards?q=spec
+Authorization: Bearer {{accessToken}}
