@@ -3,6 +3,7 @@ using Injaz.Application.Common.Exceptions;
 using Injaz.Application.Features.Activity;
 using Injaz.Application.Messaging;
 using Injaz.Application.Persistence;
+using Injaz.Application.Realtime;
 using Injaz.Application.Security;
 using Injaz.Application.Validation;
 using Injaz.Domain.Activity;
@@ -52,7 +53,7 @@ internal sealed class AddChecklistItemValidator : IValidator<AddChecklistItem>
         ChecklistRules.Text(context, nameof(request.Text), request.Text);
 }
 
-internal sealed class AddChecklistItemHandler(IAppDbContext db, IActivityLog activity, TimeProvider clock)
+internal sealed class AddChecklistItemHandler(IAppDbContext db, IActivityLog activity, IBoardEvents events, TimeProvider clock)
     : ICommandHandler<AddChecklistItem, ChecklistItemDto>
 {
     public async Task<ChecklistItemDto> HandleAsync(AddChecklistItem command, CancellationToken cancellationToken)
@@ -63,6 +64,7 @@ internal sealed class AddChecklistItemHandler(IAppDbContext db, IActivityLog act
 
         var item = ChecklistItem.Create(command.CardId, command.Text!, rank, clock.GetUtcNow());
         db.ChecklistItems.Add(item);
+        events.CardChanged(boardId, command.CardId);
         activity.Record(ActivityTypes.ChecklistItemAdded, boardId, command.CardId, new { itemId = item.Id, text = item.Text });
         return ChecklistItemDto.From(item);
     }
@@ -94,12 +96,13 @@ internal sealed class UpdateChecklistItemValidator : IValidator<UpdateChecklistI
     }
 }
 
-internal sealed class UpdateChecklistItemHandler(IAppDbContext db, IActivityLog activity)
+internal sealed class UpdateChecklistItemHandler(IAppDbContext db, IActivityLog activity, IBoardEvents events)
     : ICommandHandler<UpdateChecklistItem, ChecklistItemDto>
 {
     public async Task<ChecklistItemDto> HandleAsync(UpdateChecklistItem command, CancellationToken cancellationToken)
     {
         var (item, boardId) = await db.LoadItemAsync(command.ItemId, cancellationToken);
+        events.CardChanged(boardId, item.CardId); // tile badges + open card dialogs
 
         if (command.Text.HasValue)
         {
@@ -128,11 +131,12 @@ public sealed record MoveChecklistItem(Guid ItemId, Guid? AfterId, Guid? BeforeI
     public Permission Permission => Permission.EditContent;
 }
 
-internal sealed class MoveChecklistItemHandler(IAppDbContext db) : ICommandHandler<MoveChecklistItem, ChecklistItemDto>
+internal sealed class MoveChecklistItemHandler(IAppDbContext db, IBoardEvents events) : ICommandHandler<MoveChecklistItem, ChecklistItemDto>
 {
     public async Task<ChecklistItemDto> HandleAsync(MoveChecklistItem command, CancellationToken cancellationToken)
     {
-        var (item, _) = await db.LoadItemAsync(command.ItemId, cancellationToken);
+        var (item, boardId) = await db.LoadItemAsync(command.ItemId, cancellationToken);
+        events.CardChanged(boardId, item.CardId); // tile badges + open card dialogs
         var rank = await Placement.RankAsync(
             db.ChecklistItems.Where(i => i.CardId == item.CardId), item.Id, command.AfterId, command.BeforeId, cancellationToken);
 
@@ -150,11 +154,12 @@ public sealed record DeleteChecklistItem(Guid ItemId) : ICommand, IAuthorizedReq
     public Permission Permission => Permission.EditContent;
 }
 
-internal sealed class DeleteChecklistItemHandler(IAppDbContext db, IActivityLog activity) : ICommandHandler<DeleteChecklistItem, Unit>
+internal sealed class DeleteChecklistItemHandler(IAppDbContext db, IActivityLog activity, IBoardEvents events) : ICommandHandler<DeleteChecklistItem, Unit>
 {
     public async Task<Unit> HandleAsync(DeleteChecklistItem command, CancellationToken cancellationToken)
     {
         var (item, boardId) = await db.LoadItemAsync(command.ItemId, cancellationToken);
+        events.CardChanged(boardId, item.CardId); // tile badges + open card dialogs
         db.ChecklistItems.Remove(item);
         activity.Record(ActivityTypes.ChecklistItemDeleted, boardId, item.CardId, new { itemId = item.Id, text = item.Text });
         return Unit.Value;

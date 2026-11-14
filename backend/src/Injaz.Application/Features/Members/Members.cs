@@ -2,6 +2,7 @@ using Injaz.Application.Common.Exceptions;
 using Injaz.Application.Features.Workspaces;
 using Injaz.Application.Messaging;
 using Injaz.Application.Persistence;
+using Injaz.Application.Realtime;
 using Injaz.Application.Security;
 using Injaz.Application.Validation;
 using Injaz.Domain.Workspaces;
@@ -85,7 +86,7 @@ public sealed record RemoveMember(Guid WorkspaceId, Guid UserId) : ICommand, IAu
     public Permission Permission => Permission.View;
 }
 
-internal sealed class RemoveMemberHandler(IAppDbContext db, ICurrentAccess currentAccess, TimeProvider clock)
+internal sealed class RemoveMemberHandler(IAppDbContext db, ICurrentAccess currentAccess, IBoardEvents events, TimeProvider clock)
     : ICommandHandler<RemoveMember, Unit>
 {
     public async Task<Unit> HandleAsync(RemoveMember command, CancellationToken cancellationToken)
@@ -117,8 +118,11 @@ internal sealed class RemoveMemberHandler(IAppDbContext db, ICurrentAccess curre
         foreach (var card in assignedCards)
         {
             card.Unassign(command.UserId, now);
+            events.CardChanged(card.BoardId, card.Id);
         }
 
+        // Live connections of the removed member stop receiving this workspace's boards.
+        events.AccessRevoked(command.WorkspaceId, command.UserId);
         return Unit.Value;
     }
 }

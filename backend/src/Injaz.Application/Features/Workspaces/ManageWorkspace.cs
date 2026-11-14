@@ -2,6 +2,7 @@ using Injaz.Application.Messaging;
 using Injaz.Application.Persistence;
 using Injaz.Application.Security;
 using Injaz.Application.Validation;
+using Microsoft.EntityFrameworkCore;
 
 namespace Injaz.Application.Features.Workspaces;
 
@@ -41,12 +42,19 @@ public sealed record DeleteWorkspace(Guid WorkspaceId) : ICommand, IAuthorizedRe
     public Permission Permission => Permission.OwnWorkspace;
 }
 
-internal sealed class DeleteWorkspaceHandler(IAppDbContext db) : ICommandHandler<DeleteWorkspace, Unit>
+internal sealed class DeleteWorkspaceHandler(IAppDbContext db, Realtime.IBoardEvents events) : ICommandHandler<DeleteWorkspace, Unit>
 {
     public async Task<Unit> HandleAsync(DeleteWorkspace command, CancellationToken cancellationToken)
     {
         var workspace = await db.LoadWorkspaceAsync(command.WorkspaceId, cancellationToken);
         db.Workspaces.Remove(workspace);
+
+        // Boards are removed by cascade; tell anyone watching them (ids must be read before the commit).
+        var boardIds = await db.Boards.Where(b => b.WorkspaceId == workspace.Id).Select(b => b.Id).ToListAsync(cancellationToken);
+        foreach (var boardId in boardIds)
+        {
+            events.BoardDeleted(boardId);
+        }
         return Unit.Value;
     }
 }

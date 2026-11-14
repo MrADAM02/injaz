@@ -1,12 +1,15 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Injaz.Api.Auth;
+using Injaz.Api.Realtime;
 using Injaz.Application.Features.Auth;
 using Injaz.Application.Features.Invitations;
+using Injaz.Application.Realtime;
 using Injaz.Application.Security;
 using Injaz.Infrastructure.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Injaz.Api.Common;
 
@@ -39,7 +42,14 @@ internal static class ApiServiceCollectionExtensions
         services.AddApiRateLimiting(configuration);
 
         services.AddHttpContextAccessor();
+        services.AddScoped<CallerPrincipal>();
         services.AddScoped<ICurrentUser, HttpCurrentUser>();
+
+        services.AddSignalR(options => options.MaximumReceiveMessageSize = 32 * 1024)
+            .AddJsonProtocol(options => ConfigureJson(options.PayloadSerializerOptions));
+        services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
+        services.AddSingleton<RealtimeConnections>();
+        services.AddSingleton<IRealtimePublisher, SignalRRealtimePublisher>();
 
         services.AddOpenApi();
 
@@ -64,7 +74,7 @@ internal static class ApiServiceCollectionExtensions
         services.AddCors(options => options.AddDefaultPolicy(policy => policy
             .WithOrigins(origins)
             .AllowCredentials()
-            .WithHeaders("Content-Type", "Authorization", RequireCsrfHeaderAttribute.HeaderName, ConnectionIdHeader)
+            .WithHeaders("Content-Type", "Authorization", RequireCsrfHeaderAttribute.HeaderName, ConnectionIdHeader, "X-SignalR-User-Agent")
             .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE")
             .SetPreflightMaxAge(TimeSpan.FromHours(1))));
     }

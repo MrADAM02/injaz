@@ -5,6 +5,7 @@ using Injaz.Application.Features.Cards;
 using Injaz.Domain.Activity;
 using Injaz.Application.Messaging;
 using Injaz.Application.Persistence;
+using Injaz.Application.Realtime;
 using Injaz.Application.Security;
 using Injaz.Application.Validation;
 using Injaz.Domain.Boards;
@@ -178,11 +179,13 @@ internal sealed class UpdateBoardValidator : IValidator<UpdateBoard>
     }
 }
 
-internal sealed class UpdateBoardHandler(IAppDbContext db, IActivityLog activity, TimeProvider clock) : ICommandHandler<UpdateBoard, BoardSummaryDto>
+internal sealed class UpdateBoardHandler(IAppDbContext db, IActivityLog activity, IBoardEvents events, TimeProvider clock)
+    : ICommandHandler<UpdateBoard, BoardSummaryDto>
 {
     public async Task<BoardSummaryDto> HandleAsync(UpdateBoard command, CancellationToken cancellationToken)
     {
         var board = await db.LoadBoardAsync(command.BoardId, cancellationToken);
+        events.BoardChanged(board.Id);
         var now = clock.GetUtcNow();
         var (oldTitle, wasArchived) = (board.Title, board.IsArchived);
 
@@ -228,11 +231,12 @@ public sealed record DeleteBoard(Guid BoardId) : ICommand, IAuthorizedRequest
     public Permission Permission => Permission.DeleteContent;
 }
 
-internal sealed class DeleteBoardHandler(IAppDbContext db) : ICommandHandler<DeleteBoard, Unit>
+internal sealed class DeleteBoardHandler(IAppDbContext db, IBoardEvents events) : ICommandHandler<DeleteBoard, Unit>
 {
     public async Task<Unit> HandleAsync(DeleteBoard command, CancellationToken cancellationToken)
     {
         db.Boards.Remove(await db.LoadBoardAsync(command.BoardId, cancellationToken));
+        events.BoardDeleted(command.BoardId);
         return Unit.Value;
     }
 }

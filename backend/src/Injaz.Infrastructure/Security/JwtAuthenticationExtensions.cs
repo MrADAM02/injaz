@@ -9,7 +9,12 @@ namespace Injaz.Infrastructure.Security;
 public static class JwtAuthenticationExtensions
 {
     /// <summary>Validates the access tokens issued by <see cref="JwtTokenService"/> using the same <see cref="JwtOptions"/>.</summary>
-    public static IServiceCollection AddJwtBearerAuthentication(this IServiceCollection services)
+    /// <param name="queryTokenPathPrefix">
+    /// Paths (the SignalR hubs) where the token may also arrive as <c>?access_token=</c>: browsers can't set headers on
+    /// WebSocket connections. Everywhere else only the Authorization header is accepted. Keep the reverse proxy from
+    /// logging query strings on this path.
+    /// </param>
+    public static IServiceCollection AddJwtBearerAuthentication(this IServiceCollection services, string queryTokenPathPrefix = "/hubs")
     {
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
 
@@ -17,6 +22,20 @@ public static class JwtAuthenticationExtensions
             .Configure<IOptions<JwtOptions>, TimeProvider>((bearer, jwtOptions, clock) =>
             {
                 var jwt = jwtOptions.Value;
+
+                bearer.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var token = context.Request.Query["access_token"].ToString();
+                        if (token.Length > 0 && context.Request.Path.StartsWithSegments(queryTokenPathPrefix, StringComparison.OrdinalIgnoreCase))
+                        {
+                            context.Token = token;
+                        }
+
+                        return Task.CompletedTask;
+                    },
+                };
 
                 bearer.MapInboundClaims = false; // keep "sub" as "sub"
                 bearer.TimeProvider = clock;

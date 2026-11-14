@@ -16,9 +16,12 @@ internal static class Placement
     /// <param name="movingId">The item being placed (excluded from the siblings), or null for a new item.</param>
     /// <param name="afterId">Sibling to end up immediately before the item. Both ids null = append at the end.</param>
     /// <param name="beforeId">Sibling to end up immediately after the item.</param>
+    /// <param name="reranked">
+    /// Called for every sibling whose rank a rebalance changed, so live clients (which sort by rank) can be told.
+    /// </param>
     /// <exception cref="ConflictException">A neighbour is no longer in the sequence: the client's view is stale.</exception>
     public static async Task<string> RankAsync<T>(
-        IQueryable<T> siblings, Guid? movingId, Guid? afterId, Guid? beforeId, CancellationToken cancellationToken)
+        IQueryable<T> siblings, Guid? movingId, Guid? afterId, Guid? beforeId, CancellationToken cancellationToken, Action<T>? reranked = null)
         where T : class, IRanked
     {
         if (movingId is { } moving)
@@ -59,11 +62,12 @@ internal static class Placement
             }
         }
 
-        return await RebalanceAsync(siblings, afterId, beforeId, cancellationToken);
+        return await RebalanceAsync(siblings, afterId, beforeId, reranked, cancellationToken);
     }
 
     /// <summary>Re-spreads the whole sequence, leaving a slot at the requested position, and returns that slot's rank.</summary>
-    private static async Task<string> RebalanceAsync<T>(IQueryable<T> siblings, Guid? afterId, Guid? beforeId, CancellationToken cancellationToken)
+    private static async Task<string> RebalanceAsync<T>(
+        IQueryable<T> siblings, Guid? afterId, Guid? beforeId, Action<T>? reranked, CancellationToken cancellationToken)
         where T : class, IRanked
     {
         var items = await siblings.OrderBy(s => s.Rank).ThenBy(s => s.Id).ToListAsync(cancellationToken);
@@ -76,6 +80,7 @@ internal static class Placement
         for (var i = 0; i < items.Count; i++)
         {
             items[i].Rerank(keys[i < slot ? i : i + 1]);
+            reranked?.Invoke(items[i]);
         }
 
         return keys[slot];

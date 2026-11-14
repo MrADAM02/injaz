@@ -6,7 +6,7 @@ Task & project management — Kanban boards plus a personal "My Tasks" view. Ara
 |---|---|
 | Backend | ASP.NET Core 10 (LTS), Clean Architecture, hand-rolled CQRS dispatcher, EF Core + PostgreSQL 18 |
 | Frontend | Nuxt 4 SPA, TypeScript, Pinia, Tailwind *(phase 7)* |
-| Real-time | SignalR *(phase 6)* |
+| Real-time | SignalR (WebSockets, falls back to SSE / long polling) |
 
 ## Prerequisites
 
@@ -321,3 +321,58 @@ cards). Results are ordered most recently updated first.
 
 The board screen filters its already-loaded cards in the browser. This endpoint covers what that payload
 doesn't include: text inside descriptions, and archived cards.
+
+## Real-time (SignalR)
+
+**Hub:** `/hubs/boards`. Authentication uses the same JWT access token as REST. Browsers can't set headers on
+WebSocket connections, so the token is also accepted as `?access_token=`, but **only on `/hubs/*`**. Don't let
+the reverse proxy log query strings for that path. A connection closes when its token expires, and the client
+reconnects with a fresh token (`accessTokenFactory`).
+
+### Client contract
+
+```ts
+const hub = new HubConnectionBuilder()
+  .withUrl(`${api}/hubs/boards`, { accessTokenFactory: () => auth.accessToken })
+  .withAutomaticReconnect()
+  .build()
+
+hub.on('boardEvent', (e: BoardEvent) => store.apply(e))  // see below
+hub.on('accessRevoked', ({ workspaceId }) => leaveWorkspace(workspaceId))
+await hub.start()
+await hub.invoke('JoinBoard', boardId)                     // same rule as GET /api/boards/{id}
+// on reconnect: invoke JoinBoard again, then refetch GET /api/boards/{id} to catch up
+```
+
+REST calls should send `X-Connection-Id: <hub.connectionId>`. The connection that made a change is then skipped
+for that change's event, because it has already applied the change optimistically.
+
+`BoardEvent = { type, boardId, actorId, payload, occurredAt }`:
+
+| `type` | `payload` | Client action |
+|---|---|---|
+| `board.updated` | board summary | update the header; leave the screen if `isArchived` |
+| `board.deleted` | `{ id }` | leave the board |
+| `list.upserted` | list (without cards) | insert or update the column, ordered by `rank`. **Unknown id** (e.g. a restored list): refetch the board |
+| `list.removed` | `{ id }` | drop the column and its cards (archived or deleted) |
+| `card.upserted` | card tile (same shape as `GET /api/boards/{id}`) | insert, update or move the tile by `listId` + `rank`; if its dialog is open, refetch the card |
+| `card.removed` | `{ id }` | drop the tile (archived, deleted, or its list was archived) |
+| `label.upserted` / `label.removed` | label / `{ id }` | update the palette; on removal also strip it from tiles |
+
+### How it works
+
+- **Handlers report what changed.** For example, `events.CardChanged(boardId, cardId)`.
+- **One flush per request, after the commit.** It runs through `IAfterCommit` and does four things:
+  - reloads the **committed** state,
+  - removes duplicates (a PATCH of five fields sends one event),
+  - turns archived items into removals,
+  - publishes.
+  A command that rolls back broadcasts nothing.
+- **Rebalances are included.** When a rebalance re-spreads a list, every re-ranked sibling is republished, so
+  clients that sort by `rank` stay in order.
+- **Removing a member** pulls that user's live connections out of the workspace's board groups, and sends
+  them `accessRevoked`.
+- **Transport separation.** The Application layer owns the semantics (`IBoardEvents`). The API layer only owns
+  delivery (`IRealtimePublisher` implemented on SignalR).
+- **Single instance.** The connection registry is in memory, which matches the single-VM deployment. Running
+  several API instances would need a SignalR backplane (e.g. Redis) and a shared registry.

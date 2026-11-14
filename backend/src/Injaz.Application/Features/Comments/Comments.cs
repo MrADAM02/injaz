@@ -3,6 +3,7 @@ using Injaz.Application.Common.Exceptions;
 using Injaz.Application.Features.Activity;
 using Injaz.Application.Messaging;
 using Injaz.Application.Persistence;
+using Injaz.Application.Realtime;
 using Injaz.Application.Security;
 using Injaz.Application.Validation;
 using Injaz.Domain.Activity;
@@ -88,7 +89,7 @@ internal sealed class AddCommentValidator : IValidator<AddComment>
     public void Validate(AddComment request, ValidationContext context) => CommentRules.Body(context, request.Body);
 }
 
-internal sealed class AddCommentHandler(IAppDbContext db, ICurrentUser currentUser, IActivityLog activity, TimeProvider clock)
+internal sealed class AddCommentHandler(IAppDbContext db, ICurrentUser currentUser, IActivityLog activity, IBoardEvents events, TimeProvider clock)
     : ICommandHandler<AddComment, CommentDto>
 {
     public async Task<CommentDto> HandleAsync(AddComment command, CancellationToken cancellationToken)
@@ -97,6 +98,7 @@ internal sealed class AddCommentHandler(IAppDbContext db, ICurrentUser currentUs
 
         var comment = Comment.Create(command.CardId, currentUser.UserId, command.Body!, clock.GetUtcNow());
         db.Comments.Add(comment);
+        events.CardChanged(boardId, command.CardId);
 
         var excerpt = comment.Body.Length <= CommentRules.ExcerptLength ? comment.Body : comment.Body[..CommentRules.ExcerptLength] + "…";
         activity.Record(ActivityTypes.CommentAdded, boardId, command.CardId, new { commentId = comment.Id, excerpt });
@@ -119,7 +121,7 @@ internal sealed class EditCommentValidator : IValidator<EditComment>
     public void Validate(EditComment request, ValidationContext context) => CommentRules.Body(context, request.Body);
 }
 
-internal sealed class EditCommentHandler(IAppDbContext db, ICurrentUser currentUser, TimeProvider clock)
+internal sealed class EditCommentHandler(IAppDbContext db, ICurrentUser currentUser, IBoardEvents events, TimeProvider clock)
     : ICommandHandler<EditComment, CommentDto>
 {
     public async Task<CommentDto> HandleAsync(EditComment command, CancellationToken cancellationToken)
@@ -131,6 +133,7 @@ internal sealed class EditCommentHandler(IAppDbContext db, ICurrentUser currentU
         }
 
         comment.Edit(currentUser.UserId, command.Body!, clock.GetUtcNow());
+        await events.CommentCardChangedAsync(db, comment, cancellationToken);
         return await db.ToDtoAsync(comment, cancellationToken);
     }
 }
@@ -145,7 +148,7 @@ public sealed record DeleteComment(Guid CommentId) : ICommand, IAuthorizedReques
     public Permission Permission => Permission.EditContent;
 }
 
-internal sealed class DeleteCommentHandler(IAppDbContext db, ICurrentAccess currentAccess) : ICommandHandler<DeleteComment, Unit>
+internal sealed class DeleteCommentHandler(IAppDbContext db, ICurrentAccess currentAccess, IBoardEvents events) : ICommandHandler<DeleteComment, Unit>
 {
     public async Task<Unit> HandleAsync(DeleteComment command, CancellationToken cancellationToken)
     {
@@ -158,6 +161,16 @@ internal sealed class DeleteCommentHandler(IAppDbContext db, ICurrentAccess curr
         }
 
         db.Comments.Remove(comment);
+        await events.CommentCardChangedAsync(db, comment, cancellationToken);
         return Unit.Value;
+    }
+}
+
+internal static class CommentEvents
+{
+    public static async Task CommentCardChangedAsync(this IBoardEvents events, IAppDbContext db, Comment comment, CancellationToken cancellationToken)
+    {
+        var boardId = await db.Cards.Where(c => c.Id == comment.CardId).Select(c => c.BoardId).SingleAsync(cancellationToken);
+        events.CardChanged(boardId, comment.CardId);
     }
 }

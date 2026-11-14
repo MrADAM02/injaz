@@ -5,6 +5,7 @@ using Injaz.Application.Features.Boards;
 using Injaz.Domain.Activity;
 using Injaz.Application.Messaging;
 using Injaz.Application.Persistence;
+using Injaz.Application.Realtime;
 using Injaz.Application.Security;
 using Injaz.Application.Validation;
 using Injaz.Domain.Boards;
@@ -37,16 +38,19 @@ internal sealed class CreateListValidator : IValidator<CreateList>
         ListRules.Title(context, nameof(request.Title), request.Title);
 }
 
-internal sealed class CreateListHandler(IAppDbContext db, IActivityLog activity, TimeProvider clock) : ICommandHandler<CreateList, ListDto>
+internal sealed class CreateListHandler(IAppDbContext db, IActivityLog activity, IBoardEvents events, TimeProvider clock)
+    : ICommandHandler<CreateList, ListDto>
 {
     public async Task<ListDto> HandleAsync(CreateList command, CancellationToken cancellationToken)
     {
         var rank = await Placement.RankAsync(
-            db.BoardLists.Where(l => l.BoardId == command.BoardId), movingId: null, afterId: null, beforeId: null, cancellationToken);
+            db.BoardLists.Where(l => l.BoardId == command.BoardId), movingId: null, afterId: null, beforeId: null, cancellationToken,
+            reranked: sibling => events.ListChanged(sibling.BoardId, sibling.Id));
 
         var list = BoardList.Create(command.BoardId, command.Title!, rank, clock.GetUtcNow());
         db.BoardLists.Add(list);
         activity.Record(ActivityTypes.ListCreated, list.BoardId, data: new { listId = list.Id, title = list.Title });
+        events.ListChanged(list.BoardId, list.Id);
         return ListDto.From(list);
     }
 }
@@ -76,11 +80,12 @@ internal sealed class UpdateListValidator : IValidator<UpdateList>
     }
 }
 
-internal sealed class UpdateListHandler(IAppDbContext db, IActivityLog activity) : ICommandHandler<UpdateList, ListDto>
+internal sealed class UpdateListHandler(IAppDbContext db, IActivityLog activity, IBoardEvents events) : ICommandHandler<UpdateList, ListDto>
 {
     public async Task<ListDto> HandleAsync(UpdateList command, CancellationToken cancellationToken)
     {
         var list = await db.LoadListAsync(command.ListId, cancellationToken);
+        events.ListChanged(list.BoardId, list.Id);
         var (oldTitle, wasArchived) = (list.Title, list.IsArchived);
 
         if (command.Title.HasValue)
@@ -115,14 +120,16 @@ public sealed record MoveList(Guid ListId, Guid? AfterId, Guid? BeforeId) : ICom
     public Permission Permission => Permission.EditContent;
 }
 
-internal sealed class MoveListHandler(IAppDbContext db) : ICommandHandler<MoveList, ListDto>
+internal sealed class MoveListHandler(IAppDbContext db, IBoardEvents events) : ICommandHandler<MoveList, ListDto>
 {
     public async Task<ListDto> HandleAsync(MoveList command, CancellationToken cancellationToken)
     {
         var list = await db.LoadListAsync(command.ListId, cancellationToken);
+        events.ListChanged(list.BoardId, list.Id);
 
         var rank = await Placement.RankAsync(
-            db.BoardLists.Where(l => l.BoardId == list.BoardId), list.Id, command.AfterId, command.BeforeId, cancellationToken);
+            db.BoardLists.Where(l => l.BoardId == list.BoardId), list.Id, command.AfterId, command.BeforeId, cancellationToken,
+            reranked: sibling => events.ListChanged(sibling.BoardId, sibling.Id));
 
         list.MoveTo(rank);
         return ListDto.From(list);
@@ -138,12 +145,13 @@ public sealed record DeleteList(Guid ListId) : ICommand, IAuthorizedRequest
     public Permission Permission => Permission.DeleteContent;
 }
 
-internal sealed class DeleteListHandler(IAppDbContext db, IActivityLog activity) : ICommandHandler<DeleteList, Unit>
+internal sealed class DeleteListHandler(IAppDbContext db, IActivityLog activity, IBoardEvents events) : ICommandHandler<DeleteList, Unit>
 {
     public async Task<Unit> HandleAsync(DeleteList command, CancellationToken cancellationToken)
     {
         var list = await db.LoadListAsync(command.ListId, cancellationToken);
         db.BoardLists.Remove(list);
+        events.ListDeleted(list.BoardId, list.Id); // clients drop the column with its cards
         activity.Record(ActivityTypes.ListDeleted, list.BoardId, data: new { listId = list.Id, title = list.Title });
         return Unit.Value;
     }

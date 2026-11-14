@@ -5,6 +5,7 @@ using Injaz.Application.Features.Boards;
 using Injaz.Application.Features.Checklist;
 using Injaz.Application.Messaging;
 using Injaz.Application.Persistence;
+using Injaz.Application.Realtime;
 using Injaz.Application.Security;
 using Injaz.Application.Validation;
 using Injaz.Domain.Activity;
@@ -107,7 +108,7 @@ internal sealed class CreateCardValidator : IValidator<CreateCard>
     }
 }
 
-internal sealed class CreateCardHandler(IAppDbContext db, ICurrentUser currentUser, IActivityLog activity, TimeProvider clock)
+internal sealed class CreateCardHandler(IAppDbContext db, ICurrentUser currentUser, IActivityLog activity, IBoardEvents events, TimeProvider clock)
     : ICommandHandler<CreateCard, CardSummaryDto>
 {
     public async Task<CardSummaryDto> HandleAsync(CreateCard command, CancellationToken cancellationToken)
@@ -121,9 +122,11 @@ internal sealed class CreateCardHandler(IAppDbContext db, ICurrentUser currentUs
             beforeId = await siblings.OrderBy(c => c.Rank).ThenBy(c => c.Id).Select(c => (Guid?)c.Id).FirstOrDefaultAsync(cancellationToken);
         }
 
-        var rank = await Placement.RankAsync(siblings, movingId: null, afterId: null, beforeId, cancellationToken);
+        var rank = await Placement.RankAsync(
+            siblings, movingId: null, afterId: null, beforeId, cancellationToken, reranked: c => events.CardChanged(c.BoardId, c.Id));
         var card = Card.Create(list.BoardId, command.ListId, command.Title!, rank, currentUser.UserId, clock.GetUtcNow());
         db.Cards.Add(card);
+        events.CardChanged(card.BoardId, card.Id);
         activity.Record(ActivityTypes.CardCreated, card.BoardId, card.Id, new { title = card.Title, listId = card.ListId, list = list.Title });
         return CardSummaryDto.From(card, CardBadges.None);
     }
@@ -202,11 +205,13 @@ internal sealed class UpdateCardValidator : IValidator<UpdateCard>
 }
 
 /// <summary>Applies the patch, then logs one activity entry per field that actually changed.</summary>
-internal sealed class UpdateCardHandler(IAppDbContext db, IActivityLog activity, TimeProvider clock) : ICommandHandler<UpdateCard, CardDto>
+internal sealed class UpdateCardHandler(IAppDbContext db, IActivityLog activity, IBoardEvents events, TimeProvider clock)
+    : ICommandHandler<UpdateCard, CardDto>
 {
     public async Task<CardDto> HandleAsync(UpdateCard command, CancellationToken cancellationToken)
     {
         var card = await db.LoadCardAsync(command.CardId, cancellationToken);
+        events.CardChanged(card.BoardId, card.Id); // archived → the flush turns it into card.removed
         var now = clock.GetUtcNow();
         var before = (card.Title, card.Description, card.DueAt, card.Priority, card.IsCompleted, card.IsArchived);
 
@@ -290,11 +295,13 @@ public sealed record MoveCard(Guid CardId, Guid? ListId, Guid? AfterId, Guid? Be
     public Permission Permission => Permission.EditContent;
 }
 
-internal sealed class MoveCardHandler(IAppDbContext db, IActivityLog activity, TimeProvider clock) : ICommandHandler<MoveCard, CardSummaryDto>
+internal sealed class MoveCardHandler(IAppDbContext db, IActivityLog activity, IBoardEvents events, TimeProvider clock)
+    : ICommandHandler<MoveCard, CardSummaryDto>
 {
     public async Task<CardSummaryDto> HandleAsync(MoveCard command, CancellationToken cancellationToken)
     {
         var card = await db.LoadCardAsync(command.CardId, cancellationToken);
+        events.CardChanged(card.BoardId, card.Id);
         var fromListId = card.ListId;
         var targetListId = command.ListId ?? fromListId;
 
@@ -309,7 +316,8 @@ internal sealed class MoveCardHandler(IAppDbContext db, IActivityLog activity, T
         }
 
         var rank = await Placement.RankAsync(
-            db.Cards.Where(c => c.ListId == targetListId), card.Id, command.AfterId, command.BeforeId, cancellationToken);
+            db.Cards.Where(c => c.ListId == targetListId), card.Id, command.AfterId, command.BeforeId, cancellationToken,
+            reranked: c => events.CardChanged(c.BoardId, c.Id));
         card.MoveTo(targetListId, rank, clock.GetUtcNow());
 
         if (targetListId != fromListId)
@@ -340,12 +348,13 @@ public sealed record DeleteCard(Guid CardId) : ICommand, IAuthorizedRequest
     public Permission Permission => Permission.DeleteContent;
 }
 
-internal sealed class DeleteCardHandler(IAppDbContext db, IActivityLog activity) : ICommandHandler<DeleteCard, Unit>
+internal sealed class DeleteCardHandler(IAppDbContext db, IActivityLog activity, IBoardEvents events) : ICommandHandler<DeleteCard, Unit>
 {
     public async Task<Unit> HandleAsync(DeleteCard command, CancellationToken cancellationToken)
     {
         var card = await db.LoadCardAsync(command.CardId, cancellationToken);
         db.Cards.Remove(card);
+        events.CardDeleted(card.BoardId, card.Id);
 
         // Logged on the board without a card reference: the card (and its own feed) is gone.
         activity.Record(ActivityTypes.CardDeleted, card.BoardId, cardId: null, new { cardId = card.Id, title = card.Title });

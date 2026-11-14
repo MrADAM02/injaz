@@ -1,4 +1,5 @@
 using Injaz.Api.Common;
+using Injaz.Api.Realtime;
 using Injaz.Application;
 using Injaz.Infrastructure;
 
@@ -26,6 +27,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapControllers();
 app.MapHealthChecks("/health").AllowAnonymous();
+app.MapHub<BoardHub>(BoardHub.Path, options => options.CloseOnAuthenticationExpiration = true);
 
 if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
 {

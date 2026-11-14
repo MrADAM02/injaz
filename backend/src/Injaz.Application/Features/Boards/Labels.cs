@@ -2,6 +2,7 @@ using Injaz.Application.Common;
 using Injaz.Application.Common.Exceptions;
 using Injaz.Application.Messaging;
 using Injaz.Application.Persistence;
+using Injaz.Application.Realtime;
 using Injaz.Application.Security;
 using Injaz.Application.Validation;
 using Injaz.Domain.Boards;
@@ -27,12 +28,13 @@ internal sealed class CreateLabelValidator : IValidator<CreateLabel>
     }
 }
 
-internal sealed class CreateLabelHandler(IAppDbContext db) : ICommandHandler<CreateLabel, LabelDto>
+internal sealed class CreateLabelHandler(IAppDbContext db, IBoardEvents events) : ICommandHandler<CreateLabel, LabelDto>
 {
     public Task<LabelDto> HandleAsync(CreateLabel command, CancellationToken cancellationToken)
     {
         var label = Label.Create(command.BoardId, command.Name, command.Color!);
         db.Labels.Add(label);
+        events.LabelChanged(label.BoardId, label.Id);
         return Task.FromResult(LabelDto.From(label));
     }
 }
@@ -62,12 +64,13 @@ internal sealed class UpdateLabelValidator : IValidator<UpdateLabel>
     }
 }
 
-internal sealed class UpdateLabelHandler(IAppDbContext db) : ICommandHandler<UpdateLabel, LabelDto>
+internal sealed class UpdateLabelHandler(IAppDbContext db, IBoardEvents events) : ICommandHandler<UpdateLabel, LabelDto>
 {
     public async Task<LabelDto> HandleAsync(UpdateLabel command, CancellationToken cancellationToken)
     {
         var label = await db.Labels.SingleOrDefaultAsync(l => l.Id == command.LabelId, cancellationToken)
             ?? throw new NotFoundException("label");
+        events.LabelChanged(label.BoardId, label.Id);
 
         if (command.Name.HasValue)
         {
@@ -92,14 +95,15 @@ public sealed record DeleteLabel(Guid LabelId) : ICommand, IAuthorizedRequest
     public Permission Permission => Permission.EditContent;
 }
 
-internal sealed class DeleteLabelHandler(IAppDbContext db) : ICommandHandler<DeleteLabel, Unit>
+internal sealed class DeleteLabelHandler(IAppDbContext db, IBoardEvents events) : ICommandHandler<DeleteLabel, Unit>
 {
     public async Task<Unit> HandleAsync(DeleteLabel command, CancellationToken cancellationToken)
     {
         var label = await db.Labels.SingleOrDefaultAsync(l => l.Id == command.LabelId, cancellationToken)
             ?? throw new NotFoundException("label");
 
-        db.Labels.Remove(label); // card_labels rows go with it (FK cascade)
+        db.Labels.Remove(label); // card_labels rows go with it (FK cascade); clients strip it from their tiles
+        events.LabelDeleted(label.BoardId, label.Id);
         return Unit.Value;
     }
 }

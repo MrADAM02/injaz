@@ -4,9 +4,11 @@ using Injaz.Application.Features.Auth;
 using Injaz.Application.Features.Invitations;
 using Injaz.Application.Messaging;
 using Injaz.Application.Persistence;
+using Injaz.Application.Realtime;
 using Injaz.Application.Security;
 using Injaz.Application.Validation;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Injaz.Application;
 
@@ -29,6 +31,9 @@ public static class DependencyInjection
         services.AddOptions<InvitationOptions>();
         services.AddScoped<SessionIssuer>();
         services.AddScoped<IActivityLog, ActivityLog>();
+
+        services.AddScoped<IBoardEvents, BoardEvents>();
+        services.TryAddSingleton<IRealtimePublisher, NullRealtimePublisher>();
         return services;
     }
 

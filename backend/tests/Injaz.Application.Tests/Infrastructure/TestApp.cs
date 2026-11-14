@@ -1,6 +1,7 @@
 using Injaz.Application.Features.Auth;
 using Injaz.Application.Messaging;
 using Injaz.Application.Notifications;
+using Injaz.Application.Realtime;
 using Injaz.Application.Security;
 using Injaz.Infrastructure;
 using Injaz.Infrastructure.Persistence;
@@ -35,6 +36,7 @@ public sealed class TestApp : IAsyncDisposable
         services.AddSingleton<TimeProvider>(new DatabasePrecisionTimeProvider(Clock));
         services.AddSingleton<ICurrentUser>(CurrentUser);
         services.AddSingleton<IEmailSender>(Emails);
+        services.AddSingleton<IRealtimePublisher>(Realtime);
 
         Services = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }
@@ -44,6 +46,8 @@ public sealed class TestApp : IAsyncDisposable
     internal FakeCurrentUser CurrentUser { get; } = new();
 
     public FakeEmailSender Emails { get; } = new();
+
+    public FakeRealtimePublisher Realtime { get; } = new();
 
     public ServiceProvider Services { get; }
 
@@ -110,6 +114,63 @@ public sealed class FakeEmailSender : IEmailSender
         lock (_sent)
         {
             _sent.Add(message);
+        }
+
+        return Task.CompletedTask;
+    }
+}
+
+public sealed class FakeRealtimePublisher : IRealtimePublisher
+{
+    private readonly List<BoardEvent> _events = [];
+    private readonly List<(Guid UserId, Guid WorkspaceId, IReadOnlyCollection<Guid> BoardIds)> _revocations = [];
+
+    public IReadOnlyList<BoardEvent> Events
+    {
+        get
+        {
+            lock (_events)
+            {
+                return [.. _events];
+            }
+        }
+    }
+
+    public IReadOnlyList<(Guid UserId, Guid WorkspaceId, IReadOnlyCollection<Guid> BoardIds)> Revocations
+    {
+        get
+        {
+            lock (_events)
+            {
+                return [.. _revocations];
+            }
+        }
+    }
+
+    public void Clear()
+    {
+        lock (_events)
+        {
+            _events.Clear();
+            _revocations.Clear();
+        }
+    }
+
+    public Task PublishAsync(BoardEvent boardEvent, CancellationToken cancellationToken)
+    {
+        lock (_events)
+        {
+            _events.Add(boardEvent);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task RevokeAsync(Guid userId, Guid workspaceId, IReadOnlyCollection<Guid> boardIds, CancellationToken cancellationToken)
+    {
+        lock (_events)
+        {
+            _revocations.Add((userId, workspaceId, boardIds));
         }
 
         return Task.CompletedTask;
