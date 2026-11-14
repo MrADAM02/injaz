@@ -1,5 +1,7 @@
 using Injaz.Application.Common.Exceptions;
 using Injaz.Application.Persistence;
+using Injaz.Domain.Boards;
+using Injaz.Domain.Cards;
 using Injaz.Domain.Users;
 using Injaz.Domain.Workspaces;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +20,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<WorkspaceMember> WorkspaceMembers => Set<WorkspaceMember>();
 
     public DbSet<WorkspaceInvitation> WorkspaceInvitations => Set<WorkspaceInvitation>();
+
+    public DbSet<Board> Boards => Set<Board>();
+
+    public DbSet<BoardList> BoardLists => Set<BoardList>();
+
+    public DbSet<Label> Labels => Set<Label>();
+
+    public DbSet<Card> Cards => Set<Card>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

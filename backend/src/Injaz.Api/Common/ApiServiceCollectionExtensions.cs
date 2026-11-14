@@ -69,6 +69,9 @@ internal static class ApiServiceCollectionExtensions
             .SetPreflightMaxAge(TimeSpan.FromHours(1))));
     }
 
-    private static void ConfigureJson(JsonSerializerOptions options) =>
+    private static void ConfigureJson(JsonSerializerOptions options)
+    {
         options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+        options.Converters.Add(new OptionalJsonConverterFactory());
+    }
 }

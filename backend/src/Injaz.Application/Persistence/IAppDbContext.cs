@@ -1,3 +1,5 @@
+using Injaz.Domain.Boards;
+using Injaz.Domain.Cards;
 using Injaz.Domain.Users;
 using Injaz.Domain.Workspaces;
 using Microsoft.EntityFrameworkCore;
@@ -20,4 +22,12 @@ public interface IAppDbContext : IUnitOfWork
     DbSet<WorkspaceMember> WorkspaceMembers { get; }
 
     DbSet<WorkspaceInvitation> WorkspaceInvitations { get; }
+
+    DbSet<Board> Boards { get; }
+
+    DbSet<BoardList> BoardLists { get; }
+
+    DbSet<Label> Labels { get; }
+
+    DbSet<Card> Cards { get; }
 }

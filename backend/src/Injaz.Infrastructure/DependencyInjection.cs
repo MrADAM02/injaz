@@ -21,7 +21,7 @@ public static class DependencyInjection
         var connectionString = BuildConnectionString(configuration);
 
         services.AddDbContext<AppDbContext>(options => options
-            .UseNpgsql(connectionString)
+            .UseNpgsql(connectionString, npgsql => npgsql.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery))
             .UseSnakeCaseNamingConvention());
 
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());

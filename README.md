@@ -147,8 +147,8 @@ exists. Members whose role is too low get `403 auth.forbidden`.
 | Permission | Viewer | Member | Admin | Owner | Used for |
 |---|:-:|:-:|:-:|:-:|---|
 | `View` | ✓ | ✓ | ✓ | ✓ | read workspace, members, boards, cards, activity; leave the workspace |
-| `EditContent` | | ✓ | ✓ | ✓ | lists, cards, labels, checklists, comments; create/rename/archive boards *(phase 4)* |
-| `DeleteContent` | | | ✓ | ✓ | hard-delete boards/lists/cards; delete others' comments *(phase 4)* |
+| `EditContent` | | ✓ | ✓ | ✓ | lists, cards, labels, checklists, comments; create/rename/archive boards |
+| `DeleteContent` | | | ✓ | ✓ | hard-delete boards/lists/cards; delete others' comments *(comments: phase 5)* |
 | `ManageMembers` | | | ✓ | ✓ | invite, change roles (never to/from owner), remove members |
 | `ManageWorkspace` | | | ✓ | ✓ | rename |
 | `OwnWorkspace` | | | | ✓ | delete workspace, transfer ownership |
@@ -191,3 +191,58 @@ token stops two admins from both applying edits made on a stale view.
 |---|---|---|
 | `Invitations:Lifetime` | `7.00:00:00` | |
 | `Invitations:FrontendBaseUrl` | `""` | Development: `http://localhost:3000`. Set it in production. |
+
+## Boards, lists & cards
+
+### Endpoints
+
+| Endpoint | Permission |
+|---|---|
+| `GET /api/workspaces/{id}/boards?includeArchived=` · `POST` `{ title, description?, color? }` | View · EditContent |
+| `GET /api/boards/{id}`: the whole board (open lists → open cards, in order, plus labels and members) | View |
+| `PATCH /api/boards/{id}` `{ title?, description?, color?, isArchived? }` | EditContent |
+| `DELETE /api/boards/{id}` | DeleteContent |
+| `POST /api/boards/{id}/labels` `{ name?, color }` · `PATCH`/`DELETE /api/labels/{id}` | EditContent |
+| `POST /api/boards/{id}/lists` `{ title }` (appended) · `PATCH /api/lists/{id}` `{ title?, isArchived? }` | EditContent |
+| `POST /api/lists/{id}/move` `{ afterId?, beforeId? }` | EditContent |
+| `DELETE /api/lists/{id}` (its cards too) | DeleteContent |
+| `POST /api/lists/{id}/cards` `{ title, position?: "bottom" \| "top" }` | EditContent |
+| `GET /api/cards/{id}` · `PATCH` `{ title?, description?, dueAt?, priority?, isCompleted?, isArchived? }` | View · EditContent |
+| `POST /api/cards/{id}/move` `{ listId?, afterId?, beforeId? }` | EditContent |
+| `DELETE /api/cards/{id}` (members archive instead) | DeleteContent |
+| `PUT`/`DELETE /api/cards/{id}/assignees/{userId}` · `PUT`/`DELETE /api/cards/{id}/labels/{labelId}` (idempotent) | EditContent |
+
+**Colors** come from a named palette: `green yellow orange red purple blue sky lime pink gray`. Names are
+stored rather than hex values, so the frontend picks accessible light and dark shades.
+
+**PATCH follows JSON merge-patch rules.** An omitted field is left unchanged, and an explicit `null` clears it
+(`{ "dueAt": null }`). This is implemented with `Optional<T>` and a JSON converter. Due dates are stored in UTC.
+
+**Cross-resource checks.** Every request is authorized on its own resource (board, list, card or label). Any
+*other* id in the request must belong to the same board or workspace, otherwise it gets a 404:
+- a move's target list,
+- a label being attached,
+- a user being assigned.
+
+Removing a member from a workspace also unassigns them from its cards.
+
+### Ordering (drag & drop)
+
+Lists and cards have a `rank`: a base-62 fractional key, stored as `COLLATE "C"` so that SQL ordering matches
+ordinal string order. Order is `(rank, id)`.
+
+**Moving an item:**
+- The client sends the ids of the items it sees directly above and below the drop point. Either one may be
+  omitted; with neither, the item goes to the end.
+- The server computes a key between those two neighbours and updates **only the moved row**.
+- If a neighbour has meanwhile moved away or been deleted, the server returns
+  `409 ordering.staleNeighbor`, and the client reloads the board.
+
+**Keeping keys short.**
+- Appending bumps the last digit, so a key gains about one character per 36 appends. Inserting between two
+  items halves the gap, so it gains about one character per 6 inserts in the same spot.
+- If keys pass 64 characters, or two concurrent drops produce equal ranks, the server re-spreads **that one
+  list** in the same transaction. This fallback is rare and bounded; it is never a global reindex.
+
+**Concurrent edits.** If two people move or edit the same card at once, the `xmin` concurrency check stops the
+second change and returns `409 conflict.concurrency`.

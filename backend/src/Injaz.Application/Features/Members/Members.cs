@@ -104,7 +104,21 @@ internal sealed class RemoveMemberHandler(IAppDbContext db, ICurrentAccess curre
             throw new NotFoundException("member");
         }
 
-        workspace.RemoveMember(command.UserId, clock.GetUtcNow());
+        var now = clock.GetUtcNow();
+        workspace.RemoveMember(command.UserId, now);
+
+        // A former member must not stay assigned to cards they can no longer see.
+        var assignedCards = await db.Cards
+            .Include(c => c.Assignees)
+            .Where(c => c.Assignees.Any(a => a.UserId == command.UserId))
+            .Join(db.Boards.Where(b => b.WorkspaceId == command.WorkspaceId), c => c.BoardId, b => b.Id, (c, _) => c)
+            .ToListAsync(cancellationToken);
+
+        foreach (var card in assignedCards)
+        {
+            card.Unassign(command.UserId, now);
+        }
+
         return Unit.Value;
     }
 }

@@ -22,6 +22,266 @@ namespace Injaz.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Injaz.Domain.Boards.Board", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("color");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_archived");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("workspace_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_boards");
+
+                    b.HasIndex("CreatedById")
+                        .HasDatabaseName("ix_boards_created_by_id");
+
+                    b.HasIndex("WorkspaceId")
+                        .HasDatabaseName("ix_boards_workspace_id");
+
+                    b.ToTable("boards", (string)null);
+                });
+
+            modelBuilder.Entity("Injaz.Domain.Boards.BoardList", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BoardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("board_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_archived");
+
+                    b.Property<string>("Rank")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("rank")
+                        .UseCollation("C");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lists");
+
+                    b.HasIndex("BoardId", "Rank")
+                        .HasDatabaseName("ix_lists_board_id_rank");
+
+                    b.ToTable("lists", (string)null);
+                });
+
+            modelBuilder.Entity("Injaz.Domain.Boards.Label", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BoardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("board_id");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("color");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_labels");
+
+                    b.HasIndex("BoardId")
+                        .HasDatabaseName("ix_labels_board_id");
+
+                    b.ToTable("labels", (string)null);
+                });
+
+            modelBuilder.Entity("Injaz.Domain.Cards.Card", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BoardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("board_id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(20000)
+                        .HasColumnType("character varying(20000)")
+                        .HasColumnName("description");
+
+                    b.Property<DateTimeOffset?>("DueAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("due_at");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_archived");
+
+                    b.Property<Guid>("ListId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("list_id");
+
+                    b.Property<short>("Priority")
+                        .HasColumnType("smallint")
+                        .HasColumnName("priority");
+
+                    b.Property<string>("Rank")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("rank")
+                        .UseCollation("C");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cards");
+
+                    b.HasIndex("BoardId")
+                        .HasDatabaseName("ix_cards_board_id");
+
+                    b.HasIndex("CreatedById")
+                        .HasDatabaseName("ix_cards_created_by_id");
+
+                    b.HasIndex("ListId", "Rank")
+                        .HasDatabaseName("ix_cards_list_id_rank");
+
+                    b.ToTable("cards", (string)null);
+                });
+
+            modelBuilder.Entity("Injaz.Domain.Cards.CardAssignee", b =>
+                {
+                    b.Property<Guid>("CardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("card_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTimeOffset>("AssignedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("assigned_at");
+
+                    b.HasKey("CardId", "UserId")
+                        .HasName("pk_card_assignees");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_card_assignees_user_id");
+
+                    b.ToTable("card_assignees", (string)null);
+                });
+
+            modelBuilder.Entity("Injaz.Domain.Cards.CardLabel", b =>
+                {
+                    b.Property<Guid>("CardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("card_id");
+
+                    b.Property<Guid>("LabelId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("label_id");
+
+                    b.HasKey("CardId", "LabelId")
+                        .HasName("pk_card_labels");
+
+                    b.HasIndex("LabelId")
+                        .HasDatabaseName("ix_card_labels_label_id");
+
+                    b.ToTable("card_labels", (string)null);
+                });
+
             modelBuilder.Entity("Injaz.Domain.Users.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -268,6 +528,101 @@ namespace Injaz.Infrastructure.Persistence.Migrations
                     b.ToTable("workspace_members", (string)null);
                 });
 
+            modelBuilder.Entity("Injaz.Domain.Boards.Board", b =>
+                {
+                    b.HasOne("Injaz.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_boards_users_created_by_id");
+
+                    b.HasOne("Injaz.Domain.Workspaces.Workspace", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_boards_workspaces_workspace_id");
+                });
+
+            modelBuilder.Entity("Injaz.Domain.Boards.BoardList", b =>
+                {
+                    b.HasOne("Injaz.Domain.Boards.Board", null)
+                        .WithMany()
+                        .HasForeignKey("BoardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_lists_boards_board_id");
+                });
+
+            modelBuilder.Entity("Injaz.Domain.Boards.Label", b =>
+                {
+                    b.HasOne("Injaz.Domain.Boards.Board", null)
+                        .WithMany()
+                        .HasForeignKey("BoardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_labels_boards_board_id");
+                });
+
+            modelBuilder.Entity("Injaz.Domain.Cards.Card", b =>
+                {
+                    b.HasOne("Injaz.Domain.Boards.Board", null)
+                        .WithMany()
+                        .HasForeignKey("BoardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_cards_boards_board_id");
+
+                    b.HasOne("Injaz.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_cards_users_created_by_id");
+
+                    b.HasOne("Injaz.Domain.Boards.BoardList", null)
+                        .WithMany()
+                        .HasForeignKey("ListId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_cards_lists_list_id");
+                });
+
+            modelBuilder.Entity("Injaz.Domain.Cards.CardAssignee", b =>
+                {
+                    b.HasOne("Injaz.Domain.Cards.Card", null)
+                        .WithMany("Assignees")
+                        .HasForeignKey("CardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_card_assignees_cards_card_id");
+
+                    b.HasOne("Injaz.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_card_assignees_users_user_id");
+                });
+
+            modelBuilder.Entity("Injaz.Domain.Cards.CardLabel", b =>
+                {
+                    b.HasOne("Injaz.Domain.Cards.Card", null)
+                        .WithMany("Labels")
+                        .HasForeignKey("CardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_card_labels_cards_card_id");
+
+                    b.HasOne("Injaz.Domain.Boards.Label", null)
+                        .WithMany()
+                        .HasForeignKey("LabelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_card_labels_labels_label_id");
+                });
+
             modelBuilder.Entity("Injaz.Domain.Users.RefreshToken", b =>
                 {
                     b.HasOne("Injaz.Domain.Users.User", null)
@@ -326,6 +681,13 @@ namespace Injaz.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_workspace_members_workspaces_workspace_id");
+                });
+
+            modelBuilder.Entity("Injaz.Domain.Cards.Card", b =>
+                {
+                    b.Navigation("Assignees");
+
+                    b.Navigation("Labels");
                 });
 
             modelBuilder.Entity("Injaz.Domain.Workspaces.Workspace", b =>

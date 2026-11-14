@@ -80,3 +80,50 @@ GET {{api}}/api/invitations/{{inviteToken}}
 ### Accept (must be signed in as teammate@example.com)
 POST {{api}}/api/invitations/{{inviteToken}}/accept
 Authorization: Bearer {{accessToken}}
+
+### ---------- Boards, lists, cards ----------
+
+### Create a board
+# @name board
+POST {{api}}/api/workspaces/{{workspaceId}}/boards
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "title": "Roadmap", "color": "purple" }
+
+### Add a list
+@boardId = {{board.response.body.$.id}}
+# @name list
+POST {{api}}/api/boards/{{boardId}}/lists
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "title": "To do" }
+
+### Add a card (position: "bottom" | "top")
+@listId = {{list.response.body.$.id}}
+# @name card
+POST {{api}}/api/lists/{{listId}}/cards
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "title": "Write the spec" }
+
+### Patch a card (omitted = unchanged, null = clear)
+@cardId = {{card.response.body.$.id}}
+PATCH {{api}}/api/cards/{{cardId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "dueAt": "2026-12-01T17:00:00+03:00", "priority": "high", "description": "## Goals" }
+
+### Move a card (to another list / between neighbours)
+POST {{api}}/api/cards/{{cardId}}/move
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "listId": "{{listId}}", "afterId": null, "beforeId": null }
+
+### The whole board
+GET {{api}}/api/boards/{{boardId}}
+Authorization: Bearer {{accessToken}}
