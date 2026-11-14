@@ -1,0 +1,11 @@
+@api = http://localhost:8080
+
+### Health (checks database connectivity)
+GET {{api}}/health
+
+### Unknown route → ProblemDetails 404 with "code": "notFound"
+GET {{api}}/api/does-not-exist
+Accept: application/json
+
+### OpenAPI document (Development only)
+GET {{api}}/openapi/v1.json

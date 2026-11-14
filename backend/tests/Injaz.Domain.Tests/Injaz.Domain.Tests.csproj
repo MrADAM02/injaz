@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Injaz.Domain\Injaz.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

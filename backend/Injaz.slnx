@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Injaz.Api/Injaz.Api.csproj" />
+    <Project Path="src/Injaz.Application/Injaz.Application.csproj" />
+    <Project Path="src/Injaz.Domain/Injaz.Domain.csproj" />
+    <Project Path="src/Injaz.Infrastructure/Injaz.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Injaz.Api.IntegrationTests/Injaz.Api.IntegrationTests.csproj" />
+    <Project Path="tests/Injaz.Application.Tests/Injaz.Application.Tests.csproj" />
+    <Project Path="tests/Injaz.Domain.Tests/Injaz.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

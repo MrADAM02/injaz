@@ -1,0 +1,30 @@
+# --- .NET ---
+bin/
+obj/
+TestResults/
+*.user
+*.suo
+*.rsuser
+.vs/
+*.DotSettings.user
+artifacts/
+
+# --- Node / Nuxt ---
+node_modules/
+.nuxt/
+.output/
+.nitro/
+.cache/
+dist/
+.wrangler/
+
+# --- Env & secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Editors / OS ---
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

@@ -1,0 +1,39 @@
+# Local development stack: API + PostgreSQL.
+#   docker compose up --build           # everything
+#   docker compose up -d postgres       # only the database (then run the API with `dotnet run`)
+# Credentials below are for local development only.
+name: injaz
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: injaz
+      POSTGRES_USER: injaz
+      POSTGRES_PASSWORD: injaz_dev
+    ports:
+      # Host port 5433 so it never collides with a locally installed PostgreSQL on 5432.
+      - "5433:5432"
+    volumes:
+      # Postgres 18 images keep data under /var/lib/postgresql/<major>/docker, so mount the parent.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U injaz -d injaz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=injaz;Username=injaz;Password=injaz_dev
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
