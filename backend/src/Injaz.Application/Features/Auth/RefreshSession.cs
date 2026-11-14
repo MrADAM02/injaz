@@ -1,3 +1,4 @@
+using Injaz.Application.Common;
 using Injaz.Application.Messaging;
 using Injaz.Application.Persistence;
 using Injaz.Application.Security;
@@ -25,7 +26,7 @@ internal sealed class RefreshSessionHandler(
             throw AuthErrors.InvalidRefreshToken();
         }
 
-        var hash = RefreshTokenSecret.Hash(command.RefreshToken);
+        var hash = SecureToken.Hash(command.RefreshToken);
         var token = await db.RefreshTokens.SingleOrDefaultAsync(t => t.TokenHash == hash, cancellationToken)
             ?? throw AuthErrors.InvalidRefreshToken();
 

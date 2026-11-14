@@ -1,4 +1,5 @@
 using Injaz.Domain.Users;
+using Injaz.Domain.Workspaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace Injaz.Application.Persistence;
@@ -12,4 +13,11 @@ public interface IAppDbContext : IUnitOfWork
     DbSet<User> Users { get; }
 
     DbSet<RefreshToken> RefreshTokens { get; }
+
+    DbSet<Workspace> Workspaces { get; }
+
+    /// <summary>Read side of <see cref="Workspace.Members"/>. Change memberships through the aggregate.</summary>
+    DbSet<WorkspaceMember> WorkspaceMembers { get; }
+
+    DbSet<WorkspaceInvitation> WorkspaceInvitations { get; }
 }

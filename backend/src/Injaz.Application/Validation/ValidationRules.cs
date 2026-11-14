@@ -38,6 +38,11 @@ public static class ValidationRules
         where TEnum : struct, Enum =>
         rules.Must(Enum.IsDefined, ValidationCodes.InvalidValue);
 
+    /// <summary>For value types bound as nullable so that "omitted" can be told apart from a default value.</summary>
+    public static FieldRules<T?> NotNull<T>(this FieldRules<T?> rules)
+        where T : struct =>
+        rules.Must(v => v.HasValue, ValidationCodes.Required);
+
     /// <summary>Null is allowed (an omitted optional field).</summary>
     public static FieldRules<TEnum?> IsInEnum<TEnum>(this FieldRules<TEnum?> rules)
         where TEnum : struct, Enum =>

@@ -1,6 +1,7 @@
 using Injaz.Application.Common.Exceptions;
 using Injaz.Application.Persistence;
 using Injaz.Domain.Users;
+using Injaz.Domain.Workspaces;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -11,6 +12,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<User> Users => Set<User>();
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+    public DbSet<Workspace> Workspaces => Set<Workspace>();
+
+    public DbSet<WorkspaceMember> WorkspaceMembers => Set<WorkspaceMember>();
+
+    public DbSet<WorkspaceInvitation> WorkspaceInvitations => Set<WorkspaceInvitation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

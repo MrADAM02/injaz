@@ -1,5 +1,6 @@
 using Injaz.Application.Features.Auth;
 using Injaz.Application.Messaging;
+using Injaz.Application.Notifications;
 using Injaz.Application.Security;
 using Injaz.Infrastructure;
 using Injaz.Infrastructure.Persistence;
@@ -33,6 +34,7 @@ public sealed class TestApp : IAsyncDisposable
 
         services.AddSingleton<TimeProvider>(new DatabasePrecisionTimeProvider(Clock));
         services.AddSingleton<ICurrentUser>(CurrentUser);
+        services.AddSingleton<IEmailSender>(Emails);
 
         Services = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }
@@ -40,6 +42,8 @@ public sealed class TestApp : IAsyncDisposable
     public FakeTimeProvider Clock { get; } = new(DateTimeOffset.UtcNow);
 
     internal FakeCurrentUser CurrentUser { get; } = new();
+
+    public FakeEmailSender Emails { get; } = new();
 
     public ServiceProvider Services { get; }
 
@@ -73,6 +77,9 @@ public sealed class TestApp : IAsyncDisposable
         return session;
     }
 
+    /// <summary>Makes <paramref name="session"/>'s user the current caller.</summary>
+    public void ActAs(AuthSession session) => CurrentUser.Id = session.User.Id;
+
     public ValueTask DisposeAsync() => Services.DisposeAsync();
 }
 
@@ -81,4 +88,30 @@ public static class TestData
     public const string Password = "correct-horse-battery";
 
     public static string UniqueEmail() => $"user-{Guid.NewGuid():N}@example.com";
+}
+
+public sealed class FakeEmailSender : IEmailSender
+{
+    private readonly List<EmailMessage> _sent = [];
+
+    public IReadOnlyList<EmailMessage> Sent
+    {
+        get
+        {
+            lock (_sent)
+            {
+                return [.. _sent];
+            }
+        }
+    }
+
+    public Task SendAsync(EmailMessage message, CancellationToken cancellationToken)
+    {
+        lock (_sent)
+        {
+            _sent.Add(message);
+        }
+
+        return Task.CompletedTask;
+    }
 }

@@ -1,3 +1,4 @@
+using Injaz.Application.Common;
 using Injaz.Application.Messaging;
 using Injaz.Application.Persistence;
 using Injaz.Application.Security;
@@ -23,7 +24,7 @@ internal sealed class LogoutHandler(IAppDbContext db, TimeProvider clock) : ICom
             return Unit.Value;
         }
 
-        var hash = RefreshTokenSecret.Hash(command.RefreshToken);
+        var hash = SecureToken.Hash(command.RefreshToken);
         var familyId = await db.RefreshTokens
             .Where(t => t.TokenHash == hash)
             .Select(t => (Guid?)t.FamilyId)

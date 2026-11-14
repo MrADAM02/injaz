@@ -19,7 +19,27 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     private readonly PostgreSqlContainer _database = new PostgreSqlBuilder("postgres:18-alpine").Build();
 
-    public async ValueTask InitializeAsync() => await _database.StartAsync();
+    /// <summary>
+    /// Starts the database, then boots the host once (which applies migrations). Booting here, single-threaded,
+    /// matters: test classes run in parallel and the first CreateClient calls would otherwise race to start
+    /// several hosts that migrate the same database at the same time.
+    /// </summary>
+    public async ValueTask InitializeAsync()
+    {
+        await _database.StartAsync();
+        _ = Server;
+    }
+
+    /// <summary>A separate host on the same (already migrated) database with extra settings.</summary>
+    public WebApplicationFactory<Program> WithSettings(params (string Key, string Value)[] settings) =>
+        WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("Database:MigrateOnStartup", "false");
+            foreach (var (key, value) in settings)
+            {
+                builder.UseSetting(key, value);
+            }
+        });
 
     public override async ValueTask DisposeAsync()
     {

@@ -45,3 +45,38 @@ X-Requested-With: XMLHttpRequest
 ### Logout (revokes this session's refresh tokens and clears the cookie)
 POST {{api}}/api/auth/logout
 X-Requested-With: XMLHttpRequest
+
+### ---------- Workspaces ----------
+
+### Create a workspace (caller becomes owner)
+# @name workspace
+POST {{api}}/api/workspaces
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "name": "فريق المنتج" }
+
+### My workspaces
+@workspaceId = {{workspace.response.body.$.id}}
+GET {{api}}/api/workspaces
+Authorization: Bearer {{accessToken}}
+
+### Members
+GET {{api}}/api/workspaces/{{workspaceId}}/members
+Authorization: Bearer {{accessToken}}
+
+### Invite someone (response contains the one-time token + acceptUrl)
+# @name invitation
+POST {{api}}/api/workspaces/{{workspaceId}}/invitations
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "email": "teammate@example.com", "role": "member" }
+
+### Preview an invitation (no auth needed)
+@inviteToken = {{invitation.response.body.$.token}}
+GET {{api}}/api/invitations/{{inviteToken}}
+
+### Accept (must be signed in as teammate@example.com)
+POST {{api}}/api/invitations/{{inviteToken}}/accept
+Authorization: Bearer {{accessToken}}

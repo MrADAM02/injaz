@@ -2,6 +2,7 @@ using Injaz.Application.Common.Exceptions;
 using Injaz.Application.Messaging;
 using Injaz.Application.Persistence;
 using Injaz.Application.Security;
+using Injaz.Domain.Workspaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Injaz.Application.Tests.Messaging;
@@ -11,6 +12,7 @@ public sealed class DispatcherTests : IDisposable
     private readonly FakeCurrentUser _currentUser = new();
     private readonly FakeUnitOfWork _unitOfWork = new();
     private readonly CallLog _log = new();
+    private readonly FakeScopeResolver _scopes = new();
     private readonly ServiceProvider _provider;
     private readonly IServiceScope _scope;
 
@@ -21,7 +23,9 @@ public sealed class DispatcherTests : IDisposable
             .AddRequestHandlersFrom(typeof(DispatcherTests).Assembly)
             .AddSingleton<ICurrentUser>(_currentUser)
             .AddSingleton<IUnitOfWork>(_unitOfWork)
-            .AddSingleton(_log);
+            .AddSingleton(_log)
+            .AddSingleton<IAccessScopeResolver>(_scopes)
+            .AddLogging();
 
         // Not ValidateOnBuild: the real Application handlers need persistence services these pipeline tests don't use.
         _provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
@@ -105,6 +109,70 @@ public sealed class DispatcherTests : IDisposable
 
         var ex = Assert.Throws<InvalidOperationException>(() => services.AddRequestHandlersFrom(typeof(DispatcherTests).Assembly));
         Assert.Contains("Duplicate handler", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Authorized_request_hides_the_resource_from_non_members()
+    {
+        _currentUser.Id = Guid.CreateVersion7();
+
+        var ex = await Assert.ThrowsAsync<NotFoundException>(() => Dispatcher.SendAsync(new AdminOnly(Guid.CreateVersion7()), Ct));
+
+        Assert.Equal("workspace.notFound", ex.Code);
+    }
+
+    [Theory]
+    [InlineData(WorkspaceRole.Viewer)]
+    [InlineData(WorkspaceRole.Member)]
+    public async Task Authorized_request_forbids_members_below_the_required_role(WorkspaceRole role)
+    {
+        var workspaceId = SignInAs(role);
+
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(() => Dispatcher.SendAsync(new AdminOnly(workspaceId), Ct));
+
+        Assert.Equal("auth.forbidden", ex.Code);
+        Assert.Equal(0, _unitOfWork.SaveCount);
+    }
+
+    [Theory]
+    [InlineData(WorkspaceRole.Admin)]
+    [InlineData(WorkspaceRole.Owner)]
+    public async Task Authorized_request_exposes_the_callers_access_to_the_handler(WorkspaceRole role)
+    {
+        var workspaceId = SignInAs(role);
+
+        var seenRole = await Dispatcher.SendAsync(new AdminOnly(workspaceId), Ct);
+
+        Assert.Equal(role.ToString(), seenRole);
+    }
+
+    [Fact]
+    public async Task Authorized_request_rejects_anonymous_callers_before_looking_anything_up() =>
+        await Assert.ThrowsAsync<UnauthorizedException>(() => Dispatcher.SendAsync(new AdminOnly(Guid.CreateVersion7()), Ct));
+
+    [Fact]
+    public async Task Post_commit_actions_run_after_commit_and_their_failures_are_contained()
+    {
+        await Dispatcher.SendAsync(new WithSideEffect(Fail: false), Ct);
+
+        Assert.Equal(["side-effect"], _log.Calls);
+        Assert.Equal(1, _unitOfWork.SaveCount);
+    }
+
+    [Fact]
+    public async Task Post_commit_actions_never_run_when_the_command_fails()
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Dispatcher.SendAsync(new WithSideEffect(Fail: true), Ct));
+
+        Assert.Empty(_log.Calls);
+    }
+
+    private Guid SignInAs(WorkspaceRole role)
+    {
+        var workspaceId = Guid.CreateVersion7();
+        _currentUser.Id = Guid.CreateVersion7();
+        _scopes.Memberships[(workspaceId, _currentUser.Id.Value)] = role;
+        return workspaceId;
     }
 
     public void Dispose()

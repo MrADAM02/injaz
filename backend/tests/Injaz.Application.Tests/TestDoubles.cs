@@ -29,3 +29,12 @@ internal sealed class CallLog
 {
     public List<string> Calls { get; } = [];
 }
+
+/// <summary>Lets pipeline tests control authorization without a database: (scope id, user id) → role.</summary>
+internal sealed class FakeScopeResolver : IAccessScopeResolver
+{
+    public Dictionary<(Guid ScopeId, Guid UserId), Injaz.Domain.Workspaces.WorkspaceRole> Memberships { get; } = [];
+
+    public Task<WorkspaceAccess?> ResolveAsync(ResourceScope scope, Guid userId, CancellationToken cancellationToken) =>
+        Task.FromResult(Memberships.TryGetValue((scope.Id, userId), out var role) ? new WorkspaceAccess(scope.Id, userId, role) : null);
+}

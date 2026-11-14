@@ -1,6 +1,8 @@
 using System.Data.Common;
+using Injaz.Application.Notifications;
 using Injaz.Application.Persistence;
 using Injaz.Application.Security;
+using Injaz.Infrastructure.Email;
 using Injaz.Infrastructure.Persistence;
 using Injaz.Infrastructure.Security;
 using Injaz.Infrastructure.Time;
@@ -32,6 +34,7 @@ public static class DependencyInjection
             .ValidateOnStart();
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
+        services.AddSingleton<IEmailSender, LoggingEmailSender>();
 
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("database");

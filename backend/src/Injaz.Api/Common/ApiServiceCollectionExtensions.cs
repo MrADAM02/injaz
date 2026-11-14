@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Injaz.Api.Auth;
 using Injaz.Application.Features.Auth;
+using Injaz.Application.Features.Invitations;
 using Injaz.Application.Security;
 using Injaz.Infrastructure.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -48,6 +49,7 @@ internal static class ApiServiceCollectionExtensions
     private static void AddApiSecurity(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<AuthOptions>().Bind(configuration.GetSection(AuthOptions.SectionName));
+        services.AddOptions<InvitationOptions>().Bind(configuration.GetSection(InvitationOptions.SectionName));
         services.AddOptions<RefreshCookieOptions>().Bind(configuration.GetSection(RefreshCookieOptions.SectionName));
         services.AddSingleton<RefreshTokenCookie>();
 

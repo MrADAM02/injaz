@@ -62,6 +62,7 @@ internal sealed class CommandPipeline<TCommand, TResult> : RequestPipeline<TResu
 
         // Single commit point: handlers never call SaveChanges themselves, so each command is one transaction.
         await services.GetRequiredService<IUnitOfWork>().SaveChangesAsync(cancellationToken);
+        await services.GetRequiredService<AfterCommitQueue>().FlushAsync();
         return result;
     }
 }

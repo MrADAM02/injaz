@@ -7,7 +7,7 @@ namespace Injaz.Application.Tests;
 /// <summary>Guards that hold for every use case in the Application assembly, current and future.</summary>
 public sealed class ArchitectureTests
 {
-    private static readonly Type[] AccessPolicies = [typeof(IPublicRequest), typeof(IAuthenticatedRequest)];
+    private static readonly Type[] AccessPolicies = [typeof(IPublicRequest), typeof(IAuthenticatedRequest), typeof(IAuthorizedRequest)];
 
     private static IEnumerable<Type> RequestTypes() =>
         typeof(DependencyInjection).Assembly.GetTypes()

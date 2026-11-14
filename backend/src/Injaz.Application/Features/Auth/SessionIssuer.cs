@@ -1,3 +1,4 @@
+using Injaz.Application.Common;
 using Injaz.Application.Features.Profile;
 using Injaz.Application.Persistence;
 using Injaz.Application.Security;
@@ -30,7 +31,7 @@ internal sealed class SessionIssuer(
     /// <summary>Starts a new refresh-token family (login, registration, password change).</summary>
     public AuthSession Start(User user)
     {
-        var (secret, hash) = RefreshTokenSecret.Generate();
+        var (secret, hash) = SecureToken.Generate();
         var token = RefreshToken.StartFamily(user.Id, hash, clock.GetUtcNow(), options.Value.RefreshTokenLifetime);
         db.RefreshTokens.Add(token);
         return Build(user, secret, token);
@@ -39,7 +40,7 @@ internal sealed class SessionIssuer(
     /// <summary>Rotates <paramref name="current"/> and continues its family.</summary>
     public AuthSession Rotate(User user, RefreshToken current)
     {
-        var (secret, hash) = RefreshTokenSecret.Generate();
+        var (secret, hash) = SecureToken.Generate();
         var successor = current.Rotate(hash, clock.GetUtcNow(), options.Value.RefreshTokenLifetime);
         db.RefreshTokens.Add(successor);
         return Build(user, secret, successor);

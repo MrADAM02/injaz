@@ -135,3 +135,59 @@ login when the iteration count is raised.
 | `Auth:RefreshCookie:Secure` | `true` | `false` in Development (plain-http localhost). |
 | `Cors:AllowedOrigins` | `[]` | Development: `http://localhost:3000`. |
 | `RateLimiting:CredentialsPermitLimit` / `CredentialsWindow` | `10` / `00:01:00` | Per client IP. |
+
+## Workspaces, members & invitations
+
+### Roles and permissions
+
+Every workspace-scoped request declares a `Permission`, and the pipeline checks it against the caller's role
+before the handler runs. Non-members get `404 workspace.notFound`, so they can't tell whether the workspace
+exists. Members whose role is too low get `403 auth.forbidden`.
+
+| Permission | Viewer | Member | Admin | Owner | Used for |
+|---|:-:|:-:|:-:|:-:|---|
+| `View` | ✓ | ✓ | ✓ | ✓ | read workspace, members, boards, cards, activity; leave the workspace |
+| `EditContent` | | ✓ | ✓ | ✓ | lists, cards, labels, checklists, comments; create/rename/archive boards *(phase 4)* |
+| `DeleteContent` | | | ✓ | ✓ | hard-delete boards/lists/cards; delete others' comments *(phase 4)* |
+| `ManageMembers` | | | ✓ | ✓ | invite, change roles (never to/from owner), remove members |
+| `ManageWorkspace` | | | ✓ | ✓ | rename |
+| `OwnWorkspace` | | | | ✓ | delete workspace, transfer ownership |
+
+Roles are stored as a number (Viewer 0 … Owner 3), so SQL can sort and compare them. The `Workspace` aggregate
+enforces exactly one owner. Every membership change also updates the workspace row, so its `xmin` concurrency
+token stops two admins from both applying edits made on a stale view.
+
+### Endpoints
+
+| Endpoint | Permission |
+|---|---|
+| `GET /api/workspaces` · `POST /api/workspaces` | signed in (creator becomes owner) |
+| `GET /api/workspaces/{id}` | View |
+| `PATCH /api/workspaces/{id}` `{ name }` | ManageWorkspace |
+| `DELETE /api/workspaces/{id}` | OwnWorkspace |
+| `POST /api/workspaces/{id}/transfer-ownership` `{ userId }` | OwnWorkspace (old owner becomes admin) |
+| `GET /api/workspaces/{id}/members` | View |
+| `PATCH /api/workspaces/{id}/members/{userId}` `{ role }` | ManageMembers |
+| `DELETE /api/workspaces/{id}/members/{userId}` | View for yourself (leave), ManageMembers for others |
+| `GET` · `POST /api/workspaces/{id}/invitations` `{ email, role }` | ManageMembers |
+| `DELETE /api/workspaces/{id}/invitations/{invitationId}` | ManageMembers |
+| `GET /api/invitations/{token}` | public (preview for the invite page) |
+| `POST /api/invitations/{token}/accept` | signed in, with the invited email |
+
+### How invitations work
+
+- An invitation is for one email address and one role (never owner). It expires after 7 days.
+- The response to `POST …/invitations` contains the secret `token` and `acceptUrl`
+  (`{Invitations:FrontendBaseUrl}/invite/{token}`). This is the only time they're available, because only a
+  hash is stored.
+- Inviting the same email again revokes the previous link.
+- Only the account with the invited email can accept (`422 invitation.emailMismatch`). Spent links return
+  `422 invitation.accepted`, `invitation.revoked` or `invitation.expired`.
+- The invitation email is sent only after the command commits, through `IAfterCommit`. The MVP `IEmailSender`
+  only logs the recipient and subject; the body, which contains the link, is logged at Debug level. To send
+  real email, plug in a provider by implementing `IEmailSender`.
+
+| Key | Default | Notes |
+|---|---|---|
+| `Invitations:Lifetime` | `7.00:00:00` | |
+| `Invitations:FrontendBaseUrl` | `""` | Development: `http://localhost:3000`. Set it in production. |

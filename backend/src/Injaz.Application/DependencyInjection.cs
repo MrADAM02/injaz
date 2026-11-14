@@ -1,6 +1,8 @@
 using System.Reflection;
 using Injaz.Application.Features.Auth;
+using Injaz.Application.Features.Invitations;
 using Injaz.Application.Messaging;
+using Injaz.Application.Persistence;
 using Injaz.Application.Security;
 using Injaz.Application.Validation;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,10 +14,18 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddScoped<IDispatcher, Dispatcher>();
-        services.AddScoped<IRequestAuthorizer, RequestAuthorizer>();
         services.AddRequestHandlersFrom(typeof(DependencyInjection).Assembly);
 
+        services.AddScoped<IRequestAuthorizer, RequestAuthorizer>();
+        services.AddScoped<IAccessScopeResolver, AccessScopeResolver>();
+        services.AddScoped<CurrentAccess>();
+        services.AddScoped<ICurrentAccess>(sp => sp.GetRequiredService<CurrentAccess>());
+
+        services.AddScoped<AfterCommitQueue>();
+        services.AddScoped<IAfterCommit>(sp => sp.GetRequiredService<AfterCommitQueue>());
+
         services.AddOptions<AuthOptions>();
+        services.AddOptions<InvitationOptions>();
         services.AddScoped<SessionIssuer>();
         return services;
     }

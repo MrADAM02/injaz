@@ -179,7 +179,7 @@ public sealed class AuthEndpointsTests(ApiFactory factory)
     [Fact]
     public async Task Credential_endpoints_are_rate_limited()
     {
-        await using var limited = factory.WithWebHostBuilder(b => b.UseSetting("RateLimiting:CredentialsPermitLimit", "2"));
+        await using var limited = factory.WithSettings(("RateLimiting:CredentialsPermitLimit", "2"));
         var client = limited.CreateClient();
         var body = new { email = HttpTestExtensions.UniqueEmail(), password = "whatever-password" };
 
