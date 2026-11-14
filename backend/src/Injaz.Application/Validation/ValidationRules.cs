@@ -22,6 +22,13 @@ public static class ValidationRules
     public static FieldRules<string?> EmailAddress(this FieldRules<string?> rules) =>
         rules.Must(v => v is null || IsEmail(v), ValidationCodes.Email);
 
+    /// <summary>Absolute http(s) URL. Null or empty is allowed.</summary>
+    public static FieldRules<string?> HttpUrl(this FieldRules<string?> rules) =>
+        rules.Must(
+            v => string.IsNullOrEmpty(v)
+                || (Uri.TryCreate(v, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)),
+            ValidationCodes.Url);
+
     // ---------- identifiers / enums / ranges ----------
 
     public static FieldRules<Guid> NotEmpty(this FieldRules<Guid> rules) =>
@@ -30,6 +37,11 @@ public static class ValidationRules
     public static FieldRules<TEnum> IsInEnum<TEnum>(this FieldRules<TEnum> rules)
         where TEnum : struct, Enum =>
         rules.Must(Enum.IsDefined, ValidationCodes.InvalidValue);
+
+    /// <summary>Null is allowed (an omitted optional field).</summary>
+    public static FieldRules<TEnum?> IsInEnum<TEnum>(this FieldRules<TEnum?> rules)
+        where TEnum : struct, Enum =>
+        rules.Must(v => v is null || Enum.IsDefined(v.Value), ValidationCodes.InvalidValue);
 
     public static FieldRules<T> InclusiveBetween<T>(this FieldRules<T> rules, T min, T max)
         where T : struct, IComparable<T> =>

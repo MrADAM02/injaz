@@ -23,7 +23,8 @@ public sealed class DispatcherTests : IDisposable
             .AddSingleton<IUnitOfWork>(_unitOfWork)
             .AddSingleton(_log);
 
-        _provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+        // Not ValidateOnBuild: the real Application handlers need persistence services these pipeline tests don't use.
+        _provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
         _scope = _provider.CreateScope();
     }
 

@@ -83,11 +83,15 @@ public sealed class ErrorHandlingTests(ApiFactory factory)
     }
 
     [Fact]
-    public async Task Unknown_route_returns_problem_404()
+    public async Task Unknown_route_returns_401_to_anonymous_callers_and_404_to_signed_in_ones()
     {
-        var response = await _client.GetAsync("/api/does-not-exist", Ct);
+        // The fallback policy also covers unmatched routes, so anonymous callers learn nothing about the API surface.
+        var anonymous = await _client.GetAsync("/api/does-not-exist", Ct);
+        var (accessToken, _, _) = await _client.RegisterAsync();
+        var signedIn = await _client.SendWithBearerAsync(HttpMethod.Get, "/api/does-not-exist", accessToken);
 
-        await AssertProblemAsync(response, HttpStatusCode.NotFound, "notFound");
+        await AssertProblemAsync(anonymous, HttpStatusCode.Unauthorized, "auth.unauthorized");
+        await AssertProblemAsync(signedIn, HttpStatusCode.NotFound, "notFound");
     }
 
     private static async Task<JsonElement> AssertProblemAsync(HttpResponseMessage response, HttpStatusCode status, string code)

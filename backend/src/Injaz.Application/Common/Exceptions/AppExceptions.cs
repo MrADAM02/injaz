@@ -17,6 +17,13 @@ public sealed class ValidationException(IReadOnlyDictionary<string, IReadOnlyLis
     : AppException("validation.failed", "One or more validation errors occurred.")
 {
     public IReadOnlyDictionary<string, IReadOnlyList<ValidationError>> Errors { get; } = errors;
+
+    /// <summary>For rules only a handler can check (e.g. "current password is wrong"), reported like any field error.</summary>
+    public static ValidationException ForField(string field, string code) =>
+        new(new Dictionary<string, IReadOnlyList<ValidationError>>(StringComparer.Ordinal)
+        {
+            [FieldName.Normalize(field)] = [new ValidationError(code)],
+        });
 }
 
 /// <summary>401 — the caller is not signed in (or their token is invalid).</summary>

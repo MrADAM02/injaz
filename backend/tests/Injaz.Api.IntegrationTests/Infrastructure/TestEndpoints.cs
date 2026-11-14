@@ -3,6 +3,7 @@ using Injaz.Application.Messaging;
 using Injaz.Application.Security;
 using Injaz.Application.Validation;
 using Injaz.Domain.Common;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Injaz.Api.IntegrationTests.Infrastructure;
@@ -30,8 +31,12 @@ internal sealed class SecretHandler : IQueryHandler<Secret, string>
     public Task<string> HandleAsync(Secret query, CancellationToken cancellationToken) => Task.FromResult("classified");
 }
 
-/// <summary>Exists only in the test host. Mirrors how real controllers stay thin: bind, dispatch, return.</summary>
+/// <summary>
+/// Exists only in the test host. Mirrors how real controllers stay thin: bind, dispatch, return.
+/// [AllowAnonymous] bypasses the HTTP-level fallback policy so these tests exercise the Application-level checks.
+/// </summary>
 [ApiController]
+[AllowAnonymous]
 [Route("test")]
 public sealed class TestController(IDispatcher dispatcher) : ControllerBase
 {

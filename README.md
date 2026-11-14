@@ -87,3 +87,51 @@ All errors are RFC 9457 ProblemDetails (`application/problem+json`) with a stabl
 | 409 | duplicate / concurrent edit | `conflict.duplicate`, `conflict.concurrency` |
 | 422 | business rule violated | e.g. `workspace.lastOwner` |
 | 500 | bug — details never leaked outside Development | `server.error` |
+
+## Authentication
+
+| Endpoint | Auth | Notes |
+|---|---|---|
+| `POST /api/auth/register` | — | 201 + session. Rate-limited. |
+| `POST /api/auth/login` | — | Same error for unknown email and wrong password. Rate-limited. |
+| `POST /api/auth/refresh` | refresh cookie + `X-Requested-With` | Rotates the refresh token. |
+| `POST /api/auth/logout` | refresh cookie + `X-Requested-With` | Ends this session only. Idempotent. |
+| `GET /api/me` · `PATCH /api/me` | Bearer | PATCH: omitted/null = unchanged; `avatarUrl: ""` removes it. |
+| `PUT /api/me/password` | Bearer | Signs out every other session; returns a fresh one. Rate-limited. |
+
+**Tokens.**
+- The access token is a 15-minute JWT (HS256) that carries only `sub`. Workspace roles are checked against the
+  database on every request, so a role change takes effect immediately.
+- The access token is returned in the JSON body. The frontend keeps it in memory only.
+- The refresh token is 256 random bits. The database stores only its SHA-256 hash.
+
+**The refresh cookie.**
+- Settings: `injaz_rt`, `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/auth`, host-only (no `Domain`).
+- The app (`app.<domain>`) and the API (`api.<domain>`) are same-site, so the browser still sends the cookie
+  on credentialed `fetch`. JavaScript can never read it.
+
+**Rotation and reuse detection.**
+- Every refresh revokes the presented token and issues its successor in the same *family*.
+- Replaying a token rotated in the last 30 s returns `auth.refreshSuperseded`. The session survives, because
+  this is usually two tabs refreshing at once; the client should retry once with the cookie it now has.
+- Replaying an older rotated token means it was probably stolen, so the whole family is revoked.
+- If two refreshes race on the same token, PostgreSQL's `xmin` concurrency check lets only one win.
+
+**CSRF.** Cookie-authenticated endpoints have two protections: `SameSite=Strict`, and a required
+`X-Requested-With` header. A cross-origin request can't send that header without passing a CORS preflight,
+and only `Cors:AllowedOrigins` passes.
+
+**Passwords.** PBKDF2-HMAC-SHA512 with 210k iterations, using only the BCL. Hashes upgrade automatically on
+login when the iteration count is raised.
+
+### Configuration
+
+| Key | Default | Notes |
+|---|---|---|
+| `Jwt:SigningKey` | *(empty — startup fails)* | **Required.** At least 32 bytes. Set via env `Jwt__SigningKey` in production. |
+| `Jwt:AccessTokenLifetime` | `00:15:00` | |
+| `Auth:RefreshTokenLifetime` | `30.00:00:00` | Sliding: each refresh extends it. |
+| `Auth:RefreshReuseGracePeriod` | `00:00:30` | |
+| `Auth:RefreshCookie:Secure` | `true` | `false` in Development (plain-http localhost). |
+| `Cors:AllowedOrigins` | `[]` | Development: `http://localhost:3000`. |
+| `RateLimiting:CredentialsPermitLimit` / `CredentialsWindow` | `10` / `00:01:00` | Per client IP. |

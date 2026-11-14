@@ -22,4 +22,5 @@ public static class ValidationCodes
     public const string Email = "email";
     public const string InvalidValue = "invalidValue";
     public const string OutOfRange = "outOfRange";
+    public const string Url = "url";
 }

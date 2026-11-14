@@ -1,4 +1,5 @@
 using System.Reflection;
+using Injaz.Application.Features.Auth;
 using Injaz.Application.Messaging;
 using Injaz.Application.Security;
 using Injaz.Application.Validation;
@@ -13,6 +14,9 @@ public static class DependencyInjection
         services.AddScoped<IDispatcher, Dispatcher>();
         services.AddScoped<IRequestAuthorizer, RequestAuthorizer>();
         services.AddRequestHandlersFrom(typeof(DependencyInjection).Assembly);
+
+        services.AddOptions<AuthOptions>();
+        services.AddScoped<SessionIssuer>();
         return services;
     }
 

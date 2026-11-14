@@ -1,11 +1,47 @@
 @api = http://localhost:8080
+@email = me@example.com
+@password = correct-horse-battery
 
 ### Health (checks database connectivity)
 GET {{api}}/health
 
-### Unknown route → ProblemDetails 404 with "code": "notFound"
-GET {{api}}/api/does-not-exist
-Accept: application/json
+### Register → 201, access token in body, refresh token in httpOnly cookie
+# @name register
+POST {{api}}/api/auth/register
+Content-Type: application/json
 
-### OpenAPI document (Development only)
-GET {{api}}/openapi/v1.json
+{ "email": "{{email}}", "password": "{{password}}", "displayName": "أحمد", "locale": "ar" }
+
+### Login
+# @name login
+POST {{api}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "{{email}}", "password": "{{password}}" }
+
+### Who am I (paste the accessToken from login/register)
+@accessToken = {{login.response.body.$.accessToken}}
+GET {{api}}/api/me
+Authorization: Bearer {{accessToken}}
+
+### Update profile (null/omitted = unchanged, "" avatarUrl = remove)
+PATCH {{api}}/api/me
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "locale": "en" }
+
+### Change password (signs out other sessions, returns a fresh one)
+PUT {{api}}/api/me/password
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "currentPassword": "{{password}}", "newPassword": "another-strong-password" }
+
+### Refresh (uses the cookie; the CSRF header is mandatory)
+POST {{api}}/api/auth/refresh
+X-Requested-With: XMLHttpRequest
+
+### Logout (revokes this session's refresh tokens and clears the cookie)
+POST {{api}}/api/auth/logout
+X-Requested-With: XMLHttpRequest

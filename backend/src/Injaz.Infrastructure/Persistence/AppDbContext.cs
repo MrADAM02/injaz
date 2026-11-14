@@ -1,12 +1,17 @@
 using Injaz.Application.Common.Exceptions;
 using Injaz.Application.Persistence;
+using Injaz.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 namespace Injaz.Infrastructure.Persistence;
 
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options), IUnitOfWork
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options), IAppDbContext
 {
+    public DbSet<User> Users => Set<User>();
+
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Entity configurations live in Persistence/Configurations (one IEntityTypeConfiguration per entity).

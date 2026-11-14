@@ -15,6 +15,8 @@ namespace Injaz.Api.IntegrationTests.Infrastructure;
 /// </summary>
 public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    public const string AllowedOrigin = "https://app.injaz.test";
+
     private readonly PostgreSqlContainer _database = new PostgreSqlBuilder("postgres:18-alpine").Build();
 
     public async ValueTask InitializeAsync() => await _database.StartAsync();
@@ -31,6 +33,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("ConnectionStrings:Default", _database.GetConnectionString());
         builder.UseSetting("Database:MigrateOnStartup", "true");
         builder.UseSetting("Logging:LogLevel:Default", "Warning");
+        builder.UseSetting("Jwt:SigningKey", "integration-tests-signing-key-0123456789abcdef");
+        builder.UseSetting("Auth:RefreshCookie:Secure", "false"); // TestServer speaks plain http
+        builder.UseSetting("Cors:AllowedOrigins:0", AllowedOrigin);
+        builder.UseSetting("RateLimiting:CredentialsPermitLimit", "10000");
 
         builder.ConfigureTestServices(services =>
         {

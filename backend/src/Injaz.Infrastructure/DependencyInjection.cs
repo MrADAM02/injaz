@@ -1,9 +1,13 @@
 using System.Data.Common;
 using Injaz.Application.Persistence;
+using Injaz.Application.Security;
 using Injaz.Infrastructure.Persistence;
+using Injaz.Infrastructure.Security;
+using Injaz.Infrastructure.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 
 namespace Injaz.Infrastructure;
@@ -18,8 +22,16 @@ public static class DependencyInjection
             .UseNpgsql(connectionString)
             .UseSnakeCaseNamingConvention());
 
+        services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
-        services.AddSingleton(TimeProvider.System);
+        services.TryAddSingleton<TimeProvider>(new DatabasePrecisionTimeProvider(TimeProvider.System));
+
+        services.AddOptions<JwtOptions>()
+            .Bind(configuration.GetSection(JwtOptions.SectionName))
+            .Validate(o => o.IsValid(), $"'{JwtOptions.SectionName}' settings are invalid: Issuer/Audience are required and SigningKey must be at least {JwtOptions.MinimumKeyBytes} bytes.")
+            .ValidateOnStart();
+        services.AddSingleton<ITokenService, JwtTokenService>();
+        services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("database");
