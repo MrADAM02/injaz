@@ -41,7 +41,7 @@ export function validateFields(fields: Record<string, [string, ...Rule[]]>): Rec
   return errors
 }
 
-/** Same limits as the backend domain (User, Workspace, Board). */
+/** Same limits as the backend domain (User, Workspace, Board, BoardList, Label, Card, ChecklistItem, Comment). */
 export const limits = {
   displayName: 100,
   email: 254,
@@ -51,4 +51,10 @@ export const limits = {
   workspaceName: 100,
   boardTitle: 200,
   boardDescription: 2000,
+  listTitle: 200,
+  labelName: 50,
+  cardTitle: 500,
+  cardDescription: 20_000,
+  checklistText: 500,
+  commentBody: 10_000,
 } as const

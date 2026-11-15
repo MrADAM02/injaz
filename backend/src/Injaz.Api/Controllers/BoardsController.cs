@@ -64,6 +64,11 @@ public sealed class BoardsController(IDispatcher dispatcher) : ApiControllerBase
     public async Task<IActionResult> CreateListAsync(Guid boardId, CreateListBody body, CancellationToken cancellationToken) =>
         StatusCode(StatusCodes.Status201Created, await dispatcher.SendAsync(new CreateList(boardId, body.Title), cancellationToken));
 
+    /// <summary>Archived columns of a board (restore one with <c>PATCH /api/lists/{id} { isArchived: false }</c>).</summary>
+    [HttpGet("boards/{boardId:guid}/lists/archived")]
+    public Task<IReadOnlyList<ArchivedListDto>> ListArchivedListsAsync(Guid boardId, CancellationToken cancellationToken) =>
+        dispatcher.QueryAsync(new ListArchivedLists(boardId), cancellationToken);
+
     [HttpPatch("lists/{listId:guid}")]
     public Task<ListDto> UpdateListAsync(Guid listId, UpdateListBody body, CancellationToken cancellationToken) =>
         dispatcher.SendAsync(new UpdateList(listId, body.Title, body.IsArchived), cancellationToken);

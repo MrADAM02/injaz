@@ -13,7 +13,11 @@ const nav = computed<{ to: string; label: string; icon: IconName; active: boolea
   { to: '/my-tasks', label: t('nav.myTasks'), icon: 'tasks', active: route.path.startsWith('/my-tasks') },
 ])
 
-const activeWorkspaceId = computed(() => (typeof route.params.workspaceId === 'string' ? route.params.workspaceId : undefined))
+const board = useBoardStore()
+// On a board, its workspace is the active one.
+const activeWorkspaceId = computed(() =>
+  typeof route.params.workspaceId === 'string' ? route.params.workspaceId : route.params.boardId ? board.board?.workspaceId : undefined,
+)
 </script>
 
 <template>

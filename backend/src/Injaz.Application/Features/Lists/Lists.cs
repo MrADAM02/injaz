@@ -55,6 +55,31 @@ internal sealed class CreateListHandler(IAppDbContext db, IActivityLog activity,
     }
 }
 
+// ---------- archived lists (View): what can be restored ----------
+
+/// <summary>An archived column and how many open cards would come back with it.</summary>
+public sealed record ArchivedListDto(Guid Id, string Title, int CardCount);
+
+/// <summary>The board's archived columns, in board order. Small and bounded, so not paged.</summary>
+public sealed record ListArchivedLists(Guid BoardId) : IQuery<IReadOnlyList<ArchivedListDto>>, IAuthorizedRequest
+{
+    public ResourceScope Scope => ResourceScope.Board(BoardId);
+
+    public Permission Permission => Permission.View;
+}
+
+internal sealed class ListArchivedListsHandler(IAppDbContext db) : IQueryHandler<ListArchivedLists, IReadOnlyList<ArchivedListDto>>
+{
+    public async Task<IReadOnlyList<ArchivedListDto>> HandleAsync(ListArchivedLists query, CancellationToken cancellationToken) =>
+        await db.BoardLists
+            .AsNoTracking()
+            .Where(l => l.BoardId == query.BoardId && l.IsArchived)
+            .OrderBy(l => l.Rank)
+            .ThenBy(l => l.Id)
+            .Select(l => new ArchivedListDto(l.Id, l.Title, db.Cards.Count(c => c.ListId == l.Id && !c.IsArchived)))
+            .ToListAsync(cancellationToken);
+}
+
 // ---------- update / archive (Member+) ----------
 
 public sealed record UpdateList(Guid ListId, Optional<string?> Title, Optional<bool?> IsArchived) : ICommand<ListDto>, IAuthorizedRequest

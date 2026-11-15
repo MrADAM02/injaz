@@ -221,6 +221,7 @@ token stops two admins from both applying edits made on a stale view.
 | `DELETE /api/boards/{id}` | DeleteContent |
 | `POST /api/boards/{id}/labels` `{ name?, color }` · `PATCH`/`DELETE /api/labels/{id}` | EditContent |
 | `POST /api/boards/{id}/lists` `{ title }` (appended) · `PATCH /api/lists/{id}` `{ title?, isArchived? }` | EditContent |
+| `GET /api/boards/{id}/lists/archived`: archived lists, in board order, as `{ id, title, cardCount }` (restore one with `PATCH /api/lists/{id}` `{ isArchived: false }`) | View |
 | `POST /api/lists/{id}/move` `{ afterId?, beforeId? }` | EditContent |
 | `DELETE /api/lists/{id}` (its cards too) | DeleteContent |
 | `POST /api/lists/{id}/cards` `{ title, position?: "bottom" \| "top" }` | EditContent |
@@ -407,15 +408,61 @@ frontend/
     app.vue                   <html lang dir> follow the active locale
     layouts/                  default (sidebar · phone top bar + drawer + tab bar), auth (centered card)
     middleware/auth.global.ts restores the session once, then gates routes (private unless `public: true`)
-    pages/                    login, register, invite/[token], profile, my-tasks*, w/[id] (boards, settings), b/[id]*
+    pages/                    login, register, invite/[token], profile, my-tasks, w/[id] (boards, settings),
+                              b/[id] (board) + b/[id]/c/[cardId] (card dialog as a child route)
     components/ui/            Button, Input, Select, Modal (native <dialog>, bottom sheet on phones), Toaster, …
     components/layout/        Sidebar, Topbar, BottomNav, LocaleSwitcher
     components/workspace/     board tiles/dialogs, members, invitations, role badge
-    stores/                   auth (in-memory token), workspaces, toast, confirm, ui
-    utils/                    api-client, roles, validate, palette, bidi … (framework-free, unit-tested)
+    components/board/         Column, CardTile, composers, filter/search/labels/edit dialogs, ActivityFeed
+    components/card/          Description (Markdown), Checklist, Comments, pickers, due date, Move to…
+    stores/                   auth (in-memory token), workspaces, board, realtime, toast, confirm, ui
+    composables/useSortable   SortableJS drag & drop (see below)
+    utils/                    api-client, ordering, cards, activity, markdown, roles, validate, palette, bidi …
+                              (framework-free, unit-tested)
   scripts/check-logical-css.mjs   fails on physical left/right styles
 ```
-\* placeholders until phase 7b.
+
+### Board view
+
+- **One store for the board on screen** (`stores/board.ts`): lists in rank order, each holding its cards in
+  rank order. Ordering uses `(rank, id)` with code-unit comparison, which matches the server's `COLLATE "C"`.
+- **Optimistic moves.** A drop updates the store right away and sends `{ listId, afterId, beforeId }`: the
+  cards directly above and below the drop point. The response carries the new rank. If the move fails (for
+  example `409 ordering.staleNeighbor`), the board reloads and a toast explains why.
+- **Drag & drop** uses SortableJS in fallback mode, so mouse, touch and pen behave the same and edge auto-scroll
+  works. On touch, a long press (200 ms) starts a drag and a plain swipe scrolls. Sortable moves DOM nodes
+  itself; on drop the node is put back and the store update re-renders, so Vue and the DOM never disagree.
+  Columns are dragged by their grip.
+- **Keyboard and small screens.** The card dialog has a **Move to…** action (list + top/bottom). Column menus
+  have *Move earlier / later*. Both use the same move endpoints.
+- **Filters** (text, labels, members, due bucket) run in the browser over the loaded cards and live in the URL
+  (`?q=&labels=&members=&due=`). While a filter is on, cards can't be dragged: the neighbours of a drop would
+  be guesses. **Search** uses `GET /boards/{id}/cards` for what the board payload doesn't hold: text inside
+  descriptions, and archived cards (which can be restored from there).
+- **Phones.** Columns are 85 vw wide and snap one per swipe, with dots underneath to jump between them. Snapping
+  is paused while dragging. The card dialog is full screen, and the back gesture closes it.
+- **The card dialog is a child route** (`/b/:boardId/c/:cardId`), so it can be linked and reloaded. Closing goes
+  back in history when the dialog was opened from the board, and replaces the URL otherwise. It reads
+  `GET /api/cards/{id}`; each change PATCHes and then updates the tile from the response.
+- **Markdown** (descriptions, comments) goes through markdown-it with raw HTML off, then DOMPurify. Links open
+  in a new tab with `rel="noopener noreferrer nofollow"`. Each paragraph takes its direction from its own
+  text (`unicode-bidi: plaintext`).
+- **Activity lines** are built from the entry's `type` and `data` (`utils/activity.ts`). Names are
+  bidi-isolated, so English titles read correctly inside Arabic sentences.
+
+### Live updates
+
+- **One SignalR connection per tab** (`stores/realtime.ts`) follows whichever board is on screen.
+  - It retries forever: 0 s, 1 s, 3 s, 10 s, then every 30 s.
+  - After a reconnect it re-joins the board and reloads it, to catch up on missed events.
+  - While it is reconnecting, the board shows a banner.
+- **No echo of our own changes.** REST calls send `X-Connection-Id`, so the server leaves our own changes out.
+- **Events wait during a drag or a pending move.** Applying them then would re-render the lists under the
+  pointer, or place cards around a tile that still carries its old rank.
+- **Event handling.**
+  - `card.upserted` places the tile by `listId` + `rank`. If that card's dialog is open, it re-reads the card.
+  - An unknown list triggers a full board reload.
+  - `board.updated` (archived), `board.deleted` and `accessRevoked` leave the board with a message.
 
 ### Session handling
 

@@ -14,8 +14,9 @@ public sealed class MyTasksAndSearchTests(DatabaseFixture database) : IAsyncDisp
 {
     private const string Riyadh = "Asia/Riyadh"; // UTC+3, no DST
 
-    // 22:30 UTC on Nov 14 = 01:30 on Nov 15 in Riyadh: "today" differs between UTC and Riyadh.
-    private static readonly DateTimeOffset Now = new(2026, 11, 14, 22, 30, 0, TimeSpan.Zero);
+    // 22:30 UTC = 01:30 the next day in Riyadh, so "today" differs between UTC and Riyadh. Tomorrow, because the
+    // test clock starts at the real time and can't go back.
+    private static readonly DateTimeOffset Now = new(DateTime.UtcNow.Date.AddDays(1).AddHours(22).AddMinutes(30), TimeSpan.Zero);
 
     private readonly TestApp _app = database.CreateApp();
 
@@ -65,15 +66,15 @@ public sealed class MyTasksAndSearchTests(DatabaseFixture database) : IAsyncDisp
             await _app.SendAsync(new AssignCard(card.Id, fixture.Owner.User.Id));
         }
 
-        await _app.SendAsync(Due(c[0].Id, new DateTimeOffset(2026, 11, 15, 12, 0, 0, TimeSpan.Zero))); // today in Riyadh
-        await _app.SendAsync(Due(c[1].Id, new DateTimeOffset(2026, 11, 14, 20, 0, 0, TimeSpan.Zero))); // yesterday in Riyadh, overdue
-        await _app.SendAsync(Due(c[2].Id, new DateTimeOffset(2026, 11, 19, 12, 0, 0, TimeSpan.Zero))); // this week
+        await _app.SendAsync(Due(c[0].Id, Now.AddHours(13.5))); // 12:00 UTC the next day: today in Riyadh
+        await _app.SendAsync(Due(c[1].Id, Now.AddHours(-2.5))); // 20:00 UTC: yesterday in Riyadh, overdue
+        await _app.SendAsync(Due(c[2].Id, Now.AddDays(4).AddHours(13.5))); // this week
         // D has no due date
 
         async Task<IEnumerable<string>> Titles(DueBucket due, string? tz) => (await _app.QueryAsync(Tasks(due, tz))).Items.Select(t => t.Card.Title);
 
         Assert.Equal(["A"], await Titles(DueBucket.Today, Riyadh));
-        Assert.Equal(["B"], await Titles(DueBucket.Today, tz: null)); // UTC's "today" is Nov 14
+        Assert.Equal(["B"], await Titles(DueBucket.Today, tz: null)); // UTC's "today" is still the day before
         Assert.Equal(["B"], await Titles(DueBucket.Overdue, Riyadh));
         Assert.Equal(["A", "C"], await Titles(DueBucket.Week, Riyadh));
         Assert.Equal(["D"], await Titles(DueBucket.None, Riyadh));

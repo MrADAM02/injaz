@@ -119,6 +119,7 @@ export const useAuthStore = defineStore('auth', () => {
   function signedOut() {
     clear()
     useWorkspacesStore().reset()
+    void useRealtimeStore().stop()
   }
 
   // ----- other tabs -----

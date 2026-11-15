@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /** Profile picture, or initials on a color derived from the name when there is none (or it fails to load). */
-const props = withDefaults(defineProps<{ name: string; src?: string | null; size?: 'sm' | 'md' | 'lg' }>(), { size: 'md' })
+const props = withDefaults(defineProps<{ name: string; src?: string | null; size?: 'xs' | 'sm' | 'md' | 'lg' }>(), { size: 'md' })
 
 const failed = ref(false)
 watch(
@@ -23,7 +23,7 @@ const tone = computed(() => {
   return tones[Math.abs(hash) % tones.length]
 })
 
-const sizes = { sm: 'size-7 text-[11px]', md: 'size-9 text-xs', lg: 'size-16 text-xl' }
+const sizes = { xs: 'size-6 text-[10px]', sm: 'size-7 text-[11px]', md: 'size-9 text-xs', lg: 'size-16 text-xl' }
 </script>
 
 <template>

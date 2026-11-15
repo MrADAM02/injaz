@@ -38,8 +38,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       <div v-if="ui.drawerOpen" class="fixed inset-0 z-40 bg-backdrop md:hidden" aria-hidden="true" @click="ui.drawerOpen = false" />
     </Transition>
     <aside
-      class="fixed inset-y-0 inset-s-0 z-50 w-72 max-w-[85vw] bg-surface pt-safe shadow-2xl transition-transform duration-200 ease-out md:hidden"
-      :class="ui.drawerOpen ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full'"
+      class="fixed inset-y-0 inset-s-0 z-50 w-72 max-w-[85vw] bg-surface pt-safe transition-[translate,transform,visibility] duration-200 ease-out md:hidden"
+      :class="ui.drawerOpen ? 'translate-x-0 shadow-2xl' : 'invisible -translate-x-full rtl:translate-x-full'"
       :inert="!ui.drawerOpen"
       :aria-hidden="!ui.drawerOpen"
     >
@@ -52,7 +52,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
     <LayoutTopbar />
 
-    <main class="mx-auto w-full max-w-6xl px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 md:pb-10 md:pt-8 lg:px-10">
+    <!-- Full-bleed pages (the board) get exactly the space between the top bar and the tab bar. -->
+    <main
+      v-if="route.meta.fullBleed"
+      class="flex h-[calc(100dvh-7.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-0 flex-col md:h-dvh"
+    >
+      <slot />
+    </main>
+    <main v-else class="mx-auto w-full max-w-6xl px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 md:pb-10 md:pt-8 lg:px-10">
       <slot />
     </main>
 

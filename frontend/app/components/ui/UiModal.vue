@@ -6,7 +6,16 @@
 const open = defineModel<boolean>('open', { default: false })
 
 const props = withDefaults(
-  defineProps<{ title: string; description?: string; size?: 'sm' | 'md' | 'lg'; dismissible?: boolean }>(),
+  defineProps<{
+    title: string
+    description?: string
+    size?: 'sm' | 'md' | 'lg' | 'xl'
+    dismissible?: boolean
+    /** Phones: take the whole screen instead of a bottom sheet (long content such as a card). */
+    fullscreen?: boolean
+    /** Visually hide the header title (it still labels the dialog), e.g. when the body shows an editable title. */
+    hideTitle?: boolean
+  }>(),
   { size: 'md', dismissible: true },
 )
 
@@ -32,7 +41,8 @@ function onBackdropClick(event: MouseEvent) {
   if (props.dismissible && event.target === dialog.value) open.value = false
 }
 
-const widths = { sm: 'sm:max-w-sm', md: 'sm:max-w-lg', lg: 'sm:max-w-2xl' }
+const widths = { sm: 'sm:max-w-sm', md: 'sm:max-w-lg', lg: 'sm:max-w-2xl', xl: 'sm:max-w-4xl' }
+const full = 'max-sm:mt-0 max-sm:h-dvh max-sm:max-h-dvh max-sm:rounded-none'
 </script>
 
 <template>
@@ -40,16 +50,17 @@ const widths = { sm: 'sm:max-w-sm', md: 'sm:max-w-lg', lg: 'sm:max-w-2xl' }
     ref="dialog"
     :aria-labelledby="titleId"
     class="m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-hidden rounded-t-2xl bg-surface p-0 text-ink shadow-2xl open:animate-sheet-in sm:m-auto sm:rounded-2xl"
-    :class="widths[props.size]"
+    :class="[widths[props.size], props.fullscreen ? full : '']"
     @close="open = false"
     @cancel="onCancel"
     @click="onBackdropClick"
   >
-    <div v-if="open" class="flex max-h-[92dvh] flex-col">
-      <div class="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-line sm:hidden" aria-hidden="true" />
+    <div v-if="open" class="flex max-h-[92dvh] flex-col" :class="props.fullscreen ? 'max-sm:h-full max-sm:max-h-dvh max-sm:pt-safe' : ''">
+      <div v-if="!props.fullscreen" class="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-line sm:hidden" aria-hidden="true" />
       <header class="flex shrink-0 items-start gap-3 px-5 pb-2 pt-3 sm:pt-5">
         <div class="min-w-0 flex-1">
-          <h2 :id="titleId" class="text-lg font-semibold leading-snug">{{ props.title }}</h2>
+          <h2 :id="titleId" class="text-lg font-semibold leading-snug" :class="{ 'sr-only': props.hideTitle }" dir="auto">{{ props.title }}</h2>
+          <slot name="header" />
           <p v-if="props.description" class="mt-1 text-sm text-muted">{{ props.description }}</p>
         </div>
         <UiButton v-if="props.dismissible" variant="ghost" size="sm" icon="close" :label="t('common.close')" class="-me-2" @click="open = false" />

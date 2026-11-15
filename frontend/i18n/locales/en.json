@@ -21,7 +21,10 @@
     "optional": "Optional",
     "confirm": "Confirm",
     "you": "You",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "edit": "Edit",
+    "add": "Add",
+    "loadMore": "Load more"
   },
   "nav": {
     "primary": "Main navigation",
@@ -101,8 +104,7 @@
       "title": "No boards yet",
       "body": "Boards hold your lists and cards. Create one to get started.",
       "viewer": "Nobody has created a board in this workspace yet."
-    },
-    "placeholder": "The board view arrives in the next update."
+    }
   },
   "colors": {
     "label": "Board color",
@@ -214,7 +216,14 @@
   },
   "myTasks": {
     "title": "My tasks",
-    "placeholder": "Cards assigned to you across all your workspaces will show up here."
+    "all": "All",
+    "anyPriority": "Any priority",
+    "allWorkspaces": "All workspaces",
+    "showCompleted": "Show completed",
+    "completed": "Task completed",
+    "none": "Nothing assigned to you",
+    "noneBody": "Cards assigned to you on any board show up here, soonest due first.",
+    "noneFiltered": "No tasks match these filters"
   },
   "validation": {
     "required": "This field is required.",
@@ -257,17 +266,31 @@
       "revoked": "This invitation was revoked.",
       "expired": "This invitation has expired."
     },
-    "board": { "notFound": "This board doesn't exist or you don't have access to it." },
-    "list": { "notFound": "This list no longer exists." },
-    "card": { "notFound": "This card no longer exists." },
-    "label": { "notFound": "This label no longer exists." },
-    "checklistItem": { "notFound": "This checklist item no longer exists." },
+    "board": {
+      "notFound": "This board doesn't exist or you don't have access to it."
+    },
+    "list": {
+      "notFound": "This list no longer exists."
+    },
+    "card": {
+      "notFound": "This card no longer exists."
+    },
+    "label": {
+      "notFound": "This label no longer exists."
+    },
+    "checklistItem": {
+      "notFound": "This checklist item no longer exists."
+    },
     "comment": {
       "notFound": "This comment no longer exists.",
       "notAuthor": "You can only edit your own comments."
     },
-    "member": { "notFound": "That person isn't a member of this workspace." },
-    "user": { "notFound": "That account doesn't exist." },
+    "member": {
+      "notFound": "That person isn't a member of this workspace."
+    },
+    "user": {
+      "notFound": "That account doesn't exist."
+    },
     "conflict": {
       "concurrency": "Someone else changed this at the same time. Refresh and try again.",
       "duplicate": "That already exists."
@@ -286,6 +309,231 @@
     },
     "validation": {
       "failed": "Please fix the highlighted fields."
+    }
+  },
+  "board": {
+    "edit": "Edit board",
+    "saved": "Board saved",
+    "actions": "Board actions",
+    "backToWorkspace": "Back to workspace",
+    "activity": "Activity",
+    "archivedCards": "Archived cards",
+    "archivedLists": "Archived lists",
+    "archive": "Archive board",
+    "archiveConfirm": "Archive {title}?",
+    "archiveBody": "It disappears from the workspace’s boards. You can restore it from “Show archived boards”.",
+    "archived": "Board archived",
+    "restore": "Restore board",
+    "restored": "Board restored",
+    "isArchived": "This board is archived.",
+    "delete": "Delete board",
+    "deleteConfirm": "Delete {title}?",
+    "deleteBody": "Permanently deletes the board with all its lists, cards and history. This can’t be undone.",
+    "typeTitle": "Type the board title to confirm",
+    "deleted": "Board deleted",
+    "reconnecting": "Reconnecting… changes by others will appear once you’re back online.",
+    "emptyViewer": "This board has no lists yet.",
+    "columns": "Lists",
+    "closed": {
+      "archived": "This board was archived.",
+      "deleted": "This board was deleted.",
+      "revoked": "You no longer have access to this workspace."
+    }
+  },
+  "list": {
+    "title": "List title",
+    "titlePlaceholder": "e.g. To do",
+    "add": "Add a list",
+    "actions": "Actions for {title}",
+    "cardsIn": "Cards in {title}",
+    "cardCount": "No cards | 1 card | {n} cards",
+    "dragHint": "Drag to move the list",
+    "rename": "Rename",
+    "moveEarlier": "Move earlier",
+    "moveLater": "Move later",
+    "archive": "Archive list",
+    "archiveConfirm": "Archive {title}?",
+    "archiveBody": "The list and its cards leave the board. You can restore it from “Archived lists” in the board menu.",
+    "archived": "List archived",
+    "restore": "Restore",
+    "restored": "List restored",
+    "restoreHint": "A restored list goes back to its place on the board, with its cards.",
+    "noneArchived": "No archived lists.",
+    "delete": "Delete list",
+    "deleteConfirm": "Delete {title}?",
+    "deleteNamed": "Delete {title}",
+    "deleteBody": "Permanently deletes the list. | Permanently deletes the list and its card. | Permanently deletes the list and its {n} cards.",
+    "deleted": "List deleted"
+  },
+  "card": {
+    "titleLabel": "Card title",
+    "composerPlaceholder": "What needs to be done?",
+    "add": "Add a card",
+    "addTop": "Add a card at the top",
+    "actions": "Card actions",
+    "inList": "In {list}",
+    "archivedLabel": "Archived card",
+    "isArchived": "This card is archived. It’s hidden from the board.",
+    "complete": "Mark complete",
+    "reopen": "Mark incomplete",
+    "members": "Members",
+    "assign": "Assign",
+    "editMembers": "Change members",
+    "nobody": "Nobody",
+    "noMembers": "This workspace has no members to assign.",
+    "labels": "Labels",
+    "addLabel": "Add label",
+    "editLabels": "Change labels",
+    "noLabels": "None",
+    "dueDate": "Due date",
+    "setDue": "Set due date",
+    "noDue": "No due date",
+    "removeDue": "Remove due date",
+    "priority": "Priority",
+    "description": "Description",
+    "descriptionPlaceholder": "Add details, links or steps…",
+    "addDescription": "Add a more detailed description…",
+    "noDescription": "No description.",
+    "markdownHint": "Markdown supported",
+    "hasDescription": "Has a description",
+    "checklist": "Checklist",
+    "checklistProgress": "{percent}% done",
+    "checklistItem": "Checklist item",
+    "checklistPlaceholder": "Add an item",
+    "addItem": "Add an item",
+    "deleteItem": "Delete {text}",
+    "comments": "Comments",
+    "activity": "Activity",
+    "move": "Move",
+    "moveTitle": "Move card",
+    "toList": "List",
+    "currentList": "current",
+    "position": "Position",
+    "positionTop": "Top",
+    "positionBottom": "Bottom",
+    "movedTo": "Moved to {list}",
+    "archive": "Archive",
+    "archived": "Card archived",
+    "restore": "Restore",
+    "restored": "Card restored",
+    "deleteConfirm": "Delete {title}?",
+    "deleteBody": "Permanently deletes the card with its checklist and comments. This can’t be undone.",
+    "deleted": "Card deleted"
+  },
+  "priority": {
+    "none": "No priority",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "due": {
+    "bucket": {
+      "overdue": "Overdue",
+      "today": "Due today",
+      "week": "Next 7 days",
+      "none": "No due date"
+    },
+    "state": {
+      "done": "Completed",
+      "overdue": "Overdue",
+      "soon": "Due soon",
+      "later": "Due later"
+    }
+  },
+  "filters": {
+    "title": "Filter",
+    "hint": "Shows only matching cards. Filters apply instantly.",
+    "text": "Title contains",
+    "textPlaceholder": "Search card titles",
+    "labels": "Labels",
+    "members": "Members",
+    "me": "Me",
+    "due": "Due",
+    "deepSearch": "Search descriptions and archived cards",
+    "clear": "Clear filters",
+    "done": "Done",
+    "activeCount": "Filter | Filter (1 active) | Filter ({n} active)",
+    "showing": "No matching cards | 1 matching card | {n} matching cards",
+    "dragPaused": "Clear filters to drag cards"
+  },
+  "search": {
+    "title": "Search cards",
+    "query": "Search",
+    "placeholder": "Words in the title or description",
+    "scope": "Which cards",
+    "open": "On the board",
+    "archived": "Archived",
+    "none": "No cards found.",
+    "inList": "In {list}"
+  },
+  "labels": {
+    "title": "Labels",
+    "hint": "Color-code cards. A name is optional.",
+    "none": "No labels yet.",
+    "new": "New label",
+    "manage": "Manage labels",
+    "edit": "Edit label",
+    "name": "Name",
+    "color": "Color",
+    "deleteConfirm": "Delete the label {name}?",
+    "deleteBody": "It’s removed from every card on this board."
+  },
+  "comments": {
+    "write": "Write a comment",
+    "placeholder": "Write a comment…",
+    "post": "Comment",
+    "none": "No comments yet.",
+    "edited": "edited",
+    "edit": "Edit comment",
+    "deleteConfirm": "Delete this comment?"
+  },
+  "activity": {
+    "none": "Nothing has happened yet.",
+    "thisCard": "this card",
+    "untitled": "a card",
+    "types": {
+      "unknown": "made a change",
+      "board": {
+        "created": "created this board",
+        "renamed": "renamed the board from {from} to {to}",
+        "archived": "archived the board",
+        "restored": "restored the board"
+      },
+      "list": {
+        "created": "added the list {title}",
+        "renamed": "renamed the list {from} to {to}",
+        "archived": "archived the list {title}",
+        "restored": "restored the list {title}",
+        "deleted": "deleted the list {title}"
+      },
+      "card": {
+        "created": "added {title} to {list}",
+        "renamed": "renamed {from} to {to}",
+        "descriptionChanged": "updated the description of {title}",
+        "dueChanged": "set {title} to be due {date}",
+        "dueRemoved": "removed the due date of {title}",
+        "priorityChanged": "set the priority of {title} to {priority}",
+        "completed": "completed {title}",
+        "reopened": "reopened {title}",
+        "archived": "archived {title}",
+        "restored": "restored {title}",
+        "moved": "moved {title} from {fromList} to {toList}",
+        "deleted": "deleted {title}",
+        "assigned": "assigned {name} to {title}",
+        "unassigned": "removed {name} from {title}",
+        "labelAdded": "added the label {name} to {title}",
+        "labelRemoved": "removed the label {name} from {title}"
+      },
+      "checklist": {
+        "itemAdded": "added {text} to a checklist",
+        "itemCompleted": "completed {text}",
+        "itemReopened": "marked {text} as not done",
+        "itemDeleted": "removed {text} from a checklist"
+      },
+      "comment": {
+        "added": "commented: {excerpt}"
+      }
     }
   }
 }

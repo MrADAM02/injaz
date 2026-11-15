@@ -100,6 +100,10 @@ Content-Type: application/json
 
 { "title": "To do" }
 
+### Archived lists of the board (restore one with PATCH /api/lists/{id} { "isArchived": false })
+GET {{api}}/api/boards/{{boardId}}/lists/archived
+Authorization: Bearer {{accessToken}}
+
 ### Add a card (position: "bottom" | "top")
 @listId = {{list.response.body.$.id}}
 # @name card

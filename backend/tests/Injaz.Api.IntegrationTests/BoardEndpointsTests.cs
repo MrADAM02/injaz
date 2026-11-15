@@ -81,6 +81,41 @@ public sealed class BoardEndpointsTests(ApiFactory factory)
     }
 
     [Fact]
+    public async Task Archived_lists_are_listed_and_come_back_with_their_cards_when_restored()
+    {
+        var token = await SignUpAsync();
+        var workspaceId = await CreateAsync(token, "/api/workspaces", new { name = "W" });
+        var boardId = await CreateAsync(token, $"/api/workspaces/{workspaceId}/boards", new { title = "B" });
+        var open = await CreateAsync(token, $"/api/boards/{boardId}/lists", new { title = "Open" });
+        var old = await CreateAsync(token, $"/api/boards/{boardId}/lists", new { title = "Old" });
+        await CreateAsync(token, $"/api/lists/{old}/cards", new { title = "Kept" });
+        var gone = await CreateAsync(token, $"/api/lists/{old}/cards", new { title = "Archived card" });
+        await Send(token, HttpMethod.Patch, $"/api/cards/{gone}", new { isArchived = true });
+        await Send(token, HttpMethod.Patch, $"/api/lists/{old}", new { isArchived = true });
+
+        var archived = (await (await Send(token, HttpMethod.Get, $"/api/boards/{boardId}/lists/archived")).JsonAsync()).EnumerateArray().ToList();
+        var entry = Assert.Single(archived);
+        Assert.Equal(old, entry.GetProperty("id").GetString());
+        Assert.Equal("Old", entry.GetProperty("title").GetString());
+        Assert.Equal(1, entry.GetProperty("cardCount").GetInt32()); // archived cards stay archived
+
+        var board = await (await Send(token, HttpMethod.Get, $"/api/boards/{boardId}")).JsonAsync();
+        Assert.Equal([open], board.GetProperty("lists").EnumerateArray().Select(l => l.GetProperty("id").GetString()));
+
+        await Send(token, HttpMethod.Patch, $"/api/lists/{old}", new { isArchived = false });
+
+        board = await (await Send(token, HttpMethod.Get, $"/api/boards/{boardId}")).JsonAsync();
+        var lists = board.GetProperty("lists").EnumerateArray().ToList();
+        Assert.Equal(["Open", "Old"], lists.Select(l => l.GetProperty("title").GetString()));
+        Assert.Equal(["Kept"], Titles(lists[1]));
+        Assert.Empty((await (await Send(token, HttpMethod.Get, $"/api/boards/{boardId}/lists/archived")).JsonAsync()).EnumerateArray());
+
+        var stranger = await SignUpAsync();
+        var hidden = await Send(stranger, HttpMethod.Get, $"/api/boards/{boardId}/lists/archived");
+        await hidden.AssertProblemAsync(HttpStatusCode.NotFound, "board.notFound");
+    }
+
+    [Fact]
     public async Task Cards_of_other_workspaces_are_invisible()
     {
         var (_, card) = await CardAsync();
