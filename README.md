@@ -5,13 +5,14 @@ Task & project management — Kanban boards plus a personal "My Tasks" view. Ara
 | Part | Stack |
 |---|---|
 | Backend | ASP.NET Core 10 (LTS), Clean Architecture, hand-rolled CQRS dispatcher, EF Core + PostgreSQL 18 |
-| Frontend | Nuxt 4 SPA, TypeScript, Pinia, Tailwind *(phase 7)* |
+| Frontend | Nuxt 4 SPA (static), TypeScript, Pinia, Tailwind CSS 4, @nuxtjs/i18n |
 | Real-time | SignalR (WebSockets, falls back to SSE / long polling) |
 
 ## Prerequisites
 
 - .NET SDK 10.0.1xx or newer (`global.json` rolls forward to the latest feature band)
 - Docker Desktop (local stack + integration tests use Testcontainers)
+- Node.js 22.12+ (24 LTS recommended) for the frontend
 
 ## Run locally
 
@@ -30,11 +31,27 @@ Credentials: `injaz` / `injaz_dev`, database `injaz` — local development only.
 In Development, migrations are applied on startup (`Database:MigrateOnStartup`). Smoke requests live in
 [backend/src/Injaz.Api/Injaz.Api.http](backend/src/Injaz.Api/Injaz.Api.http); the OpenAPI document is at `/openapi/v1.json`.
 
+### Frontend
+
+```bash
+docker compose up -d                   # API on :8080
+cd frontend
+npm install
+npm run dev                            # http://localhost:3040
+npm run dev:lan                        # same, reachable from a phone on your network
+```
+
+The dev server proxies `/api` and `/hubs` to the API (`INJAZ_DEV_API`, default `http://localhost:8080`). The
+app is therefore same-origin in development, and a phone on the LAN works without any CORS or cookie setup.
+
 ## Test
 
 ```bash
 cd backend
 dotnet test --solution Injaz.slnx      # Docker must be running (integration tests start a Postgres container)
+
+cd frontend
+npm run check                          # RTL lint + type check + unit tests
 ```
 
 ## Migrations
@@ -133,7 +150,7 @@ login when the iteration count is raised.
 | `Auth:RefreshTokenLifetime` | `30.00:00:00` | Sliding: each refresh extends it. |
 | `Auth:RefreshReuseGracePeriod` | `00:00:30` | |
 | `Auth:RefreshCookie:Secure` | `true` | `false` in Development (plain-http localhost). |
-| `Cors:AllowedOrigins` | `[]` | Development: `http://localhost:3000`. |
+| `Cors:AllowedOrigins` | `[]` | Development: `http://localhost:3040`. |
 | `RateLimiting:CredentialsPermitLimit` / `CredentialsWindow` | `10` / `00:01:00` | Per client IP. |
 
 ## Workspaces, members & invitations
@@ -190,7 +207,7 @@ token stops two admins from both applying edits made on a stale view.
 | Key | Default | Notes |
 |---|---|---|
 | `Invitations:Lifetime` | `7.00:00:00` | |
-| `Invitations:FrontendBaseUrl` | `""` | Development: `http://localhost:3000`. Set it in production. |
+| `Invitations:FrontendBaseUrl` | `""` | Development: `http://localhost:3040`. Set it in production. |
 
 ## Boards, lists & cards
 
@@ -376,3 +393,60 @@ for that change's event, because it has already applied the change optimisticall
   delivery (`IRealtimePublisher` implemented on SignalR).
 - **Single instance.** The connection registry is in memory, which matches the single-VM deployment. Running
   several API instances would need a SignalR backplane (e.g. Redis) and a shared registry.
+
+## Frontend (Nuxt 4 SPA)
+
+`ssr: false`, built with `nuxt generate` into static files (`.output/public`) for Cloudflare Pages. All data
+comes from the API at runtime. Set `NUXT_PUBLIC_API_BASE=https://api.<domain>` at build time (empty means
+same origin).
+
+```
+frontend/
+  i18n/locales/{ar,en}.json   messages (Arabic default); i18n.config.ts adds Arabic's six plural forms
+  app/
+    app.vue                   <html lang dir> follow the active locale
+    layouts/                  default (sidebar · phone top bar + drawer + tab bar), auth (centered card)
+    middleware/auth.global.ts restores the session once, then gates routes (private unless `public: true`)
+    pages/                    login, register, invite/[token], profile, my-tasks*, w/[id] (boards, settings), b/[id]*
+    components/ui/            Button, Input, Select, Modal (native <dialog>, bottom sheet on phones), Toaster, …
+    components/layout/        Sidebar, Topbar, BottomNav, LocaleSwitcher
+    components/workspace/     board tiles/dialogs, members, invitations, role badge
+    stores/                   auth (in-memory token), workspaces, toast, confirm, ui
+    utils/                    api-client, roles, validate, palette, bidi … (framework-free, unit-tested)
+  scripts/check-logical-css.mjs   fails on physical left/right styles
+```
+\* placeholders until phase 7b.
+
+### Session handling
+
+- The access token lives **only in memory**. A page load restores the session with one
+  `POST /api/auth/refresh`, which sends the httpOnly cookie.
+- The API client attaches the token and refreshes about 30 s before it expires. On a `401` it refreshes once and
+  retries; if that fails, the session is over and the client goes to `/login?redirect=…`.
+- Refreshes are **single-flight**: parallel requests share one refresh. `auth.refreshSuperseded` (another tab
+  rotated the cookie a moment ago) is retried once.
+- Signing out in one tab signs out every tab, through a `BroadcastChannel`.
+- `?redirect=` only accepts in-app paths, so the login page can't be used as an open redirect.
+
+### Errors and validation
+
+Forms check the same rules as the API, with the same codes (`required`, `maxLength`…), before sending.
+Server errors are translated by their ProblemDetails `code`: `errors.<code>` for the whole request, and
+`validation.<code>` with its params for each field. A unit test checks that every error code thrown in the C#
+sources has a translation, and that both locale files have the same keys and placeholders.
+
+### RTL and mobile
+
+- **Logical properties only.** Use `ms/me`, `ps/pe`, `inset-s/e`, `border-s/e`, `rounded-s/e` and `text-start`.
+  `npm run lint:rtl` enforces it. Directional icons are mirrored with `rtl:`.
+- **LTR values inside Arabic text.** Emails, URLs and passwords are rendered LTR. When they appear inside a
+  translated sentence, they are wrapped in Unicode isolates (`isolateLtr`).
+- **Phone layout.** Phones get a top bar, a drawer that slides in from the start edge, and a bottom tab bar.
+  Dialogs become bottom sheets.
+- **Touch and small screens.**
+  - Tap targets are at least 44 px.
+  - Inputs are at least 16 px, so iOS doesn't zoom in.
+  - Layout respects `env(safe-area-inset-*)` and uses `dvh` units.
+  - Selects are native, so phones show their own picker.
+- **Locale preference.** It is stored on the profile and follows the user to every device. When signed out, the
+  last choice on this device is used, with Arabic as the default.

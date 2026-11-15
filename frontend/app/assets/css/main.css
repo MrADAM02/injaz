@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Components use semantic utilities (bg-surface, text-muted, border-line, bg-accent …);
+ * dark mode swaps the variables, so markup never needs `dark:` for the basics.
+ * Layout uses logical properties only (ms/me/ps/pe/start/end, text-start): `npm run lint:rtl` enforces it.
+ */
+@theme {
+  --font-sans: "IBM Plex Sans Arabic", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-canvas: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-subtle: #eef1f4;
+  --color-line: #dde2e8;
+  --color-ink: #17202b;
+  --color-muted: #5b6776;
+  --color-accent: #0f766e;
+  --color-accent-strong: #0b5e57;
+  --color-accent-soft: #e0f2ef;
+  --color-on-accent: #ffffff;
+  --color-danger: #b42318;
+  --color-danger-soft: #fdecea;
+  --color-success: #15803d;
+  --color-backdrop: rgb(15 23 32 / 0.45);
+
+  --animate-sheet-in: sheet-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-fade-in: fade-in 160ms ease-out;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-canvas: #0f141a;
+    --color-surface: #171d25;
+    --color-subtle: #212935;
+    --color-line: #2c3542;
+    --color-ink: #e8edf2;
+    --color-muted: #9aa6b4;
+    --color-accent: #2bb3a3;
+    --color-accent-strong: #5fd0c2;
+    --color-accent-soft: #123a37;
+    --color-on-accent: #04201d;
+    --color-danger: #f2766b;
+    --color-danger-soft: #3a1714;
+    --color-success: #4ade80;
+    --color-backdrop: rgb(0 0 0 / 0.6);
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* iPhone notch / home indicator. */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility bottom-safe {
+  bottom: env(safe-area-inset-bottom);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    color-scheme: light dark;
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+  }
+
+  /* Arabic script needs a little more line height than Latin. */
+  :lang(ar) body {
+    line-height: 1.65;
+  }
+
+  /* 16px minimum stops iOS Safari from zooming into focused fields. */
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+
+  dialog::backdrop {
+    background: var(--color-backdrop);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      transition-duration: 1ms !important;
+    }
+  }
+}

@@ -1,0 +1,291 @@
+{
+  "app": {
+    "name": "Injaz",
+    "tagline": "Plan it. Move it. Get it done."
+  },
+  "common": {
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "create": "Create",
+    "creating": "Creating…",
+    "delete": "Delete",
+    "close": "Close",
+    "loading": "Loading…",
+    "retry": "Try again",
+    "back": "Back",
+    "copy": "Copy",
+    "copied": "Copied",
+    "share": "Share",
+    "remove": "Remove",
+    "optional": "Optional",
+    "confirm": "Confirm",
+    "you": "You",
+    "dismiss": "Dismiss"
+  },
+  "nav": {
+    "primary": "Main navigation",
+    "home": "Home",
+    "myTasks": "My tasks",
+    "profile": "Profile",
+    "settings": "Settings",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "workspaces": "Workspaces",
+    "newWorkspace": "New workspace",
+    "signOut": "Sign out",
+    "language": "Language",
+    "account": "Account menu"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "displayName": "Your name",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "passwordHint": "At least 8 characters.",
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to continue to Injaz.",
+      "submit": "Sign in",
+      "noAccount": "New to Injaz?",
+      "toRegister": "Create an account"
+    },
+    "register": {
+      "title": "Create your account",
+      "subtitle": "Organize your team's work in minutes.",
+      "submit": "Create account",
+      "haveAccount": "Already have an account?",
+      "toLogin": "Sign in"
+    },
+    "sessionExpired": "Your session has ended. Please sign in again.",
+    "signedOut": "You've been signed out."
+  },
+  "roles": {
+    "owner": "Owner",
+    "admin": "Admin",
+    "member": "Member",
+    "viewer": "Viewer",
+    "hint": {
+      "admin": "Manages members and settings",
+      "member": "Creates and edits cards",
+      "viewer": "Can only view"
+    }
+  },
+  "home": {
+    "empty": {
+      "title": "Create your first workspace",
+      "body": "A workspace holds your team's boards. Invite people and give each one a role."
+    }
+  },
+  "workspace": {
+    "create": "Create a workspace",
+    "name": "Workspace name",
+    "namePlaceholder": "e.g. Marketing team",
+    "created": "Workspace created",
+    "memberCount": "No members | 1 member | {n} members",
+    "boards": "Boards",
+    "settings": "Workspace settings"
+  },
+  "boards": {
+    "new": "New board",
+    "create": "Create a board",
+    "title": "Board title",
+    "titlePlaceholder": "e.g. Product launch",
+    "description": "Description",
+    "color": "Color",
+    "created": "Board created",
+    "archived": "Archived",
+    "showArchived": "Show archived boards",
+    "empty": {
+      "title": "No boards yet",
+      "body": "Boards hold your lists and cards. Create one to get started.",
+      "viewer": "Nobody has created a board in this workspace yet."
+    },
+    "placeholder": "The board view arrives in the next update."
+  },
+  "colors": {
+    "label": "Board color",
+    "green": "Green",
+    "yellow": "Yellow",
+    "orange": "Orange",
+    "red": "Red",
+    "purple": "Purple",
+    "blue": "Blue",
+    "sky": "Sky",
+    "lime": "Lime",
+    "pink": "Pink",
+    "gray": "Gray"
+  },
+  "settings": {
+    "tabs": {
+      "general": "General",
+      "members": "Members",
+      "invitations": "Invitations"
+    },
+    "renamed": "Workspace renamed",
+    "dangerZone": "Danger zone",
+    "leave": {
+      "title": "Leave workspace",
+      "body": "You'll lose access to its boards. An admin can invite you back.",
+      "action": "Leave",
+      "confirm": "Leave {name}?",
+      "done": "You left {name}",
+      "owner": "You're the owner. Transfer ownership before leaving."
+    },
+    "transfer": {
+      "title": "Transfer ownership",
+      "body": "The new owner gets full control, including deleting the workspace. You'll become an admin.",
+      "select": "New owner",
+      "action": "Transfer",
+      "confirm": "Make {name} the owner?",
+      "done": "{name} is now the owner",
+      "noCandidates": "Invite someone first. Only existing members can become the owner."
+    },
+    "delete": {
+      "title": "Delete workspace",
+      "body": "Permanently deletes the workspace with all its boards, lists and cards. This can't be undone.",
+      "action": "Delete workspace",
+      "confirm": "Delete {name}?",
+      "typeName": "Type the workspace name to confirm",
+      "done": "Workspace deleted"
+    }
+  },
+  "members": {
+    "joined": "Joined {date}",
+    "changeRole": "Role for {name}",
+    "roleChanged": "{name} is now {role}",
+    "remove": "Remove {name}",
+    "removeConfirm": "Remove {name}?",
+    "removeBody": "They'll lose access to every board in this workspace and be unassigned from its cards.",
+    "removed": "{name} was removed"
+  },
+  "invitations": {
+    "invite": "Invite people",
+    "inviteTitle": "Invite to {name}",
+    "email": "Email address",
+    "role": "Role",
+    "send": "Create invite link",
+    "readyTitle": "Invite link ready",
+    "readyBody": "Send this link to {email}. It works once, only for that email address, and expires {date}.",
+    "readyWarning": "For security, the link is shown only now. You can always create a new one.",
+    "pending": "Pending invitations",
+    "none": "No pending invitations.",
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke the invitation for {email}?",
+    "revokeBody": "The link stops working immediately.",
+    "revoked": "Invitation revoked",
+    "expires": "Expires {date}",
+    "invitedBy": "Invited by {name}",
+    "replaceHint": "Inviting the same email again replaces its old link.",
+    "manageOnly": "Only admins and the owner can see and send invitations."
+  },
+  "invite": {
+    "title": "You're invited",
+    "body": "{inviter} invited you to join {workspace} as {role}.",
+    "forEmail": "This invitation is for {email}.",
+    "accept": "Join workspace",
+    "joined": "Welcome to {name}!",
+    "signIn": "Sign in to accept",
+    "register": "Create an account",
+    "wrongAccount": "You're signed in as {current}, but this invitation is for {email}.",
+    "switchAccount": "Sign in with another account",
+    "accepted": "This invitation has already been used.",
+    "revoked": "This invitation was revoked.",
+    "expired": "This invitation has expired. Ask for a new link.",
+    "notFound": "This invitation link isn't valid.",
+    "goHome": "Go to my workspaces"
+  },
+  "profile": {
+    "title": "Profile",
+    "details": "Your details",
+    "emailHint": "Your email can't be changed.",
+    "avatarUrl": "Profile picture URL",
+    "avatarHint": "A link to an image (https://…). Leave empty to use your initials.",
+    "language": "Language",
+    "saved": "Profile saved",
+    "password": {
+      "title": "Change password",
+      "current": "Current password",
+      "new": "New password",
+      "submit": "Update password",
+      "changed": "Password updated. Your other devices were signed out."
+    }
+  },
+  "myTasks": {
+    "title": "My tasks",
+    "placeholder": "Cards assigned to you across all your workspaces will show up here."
+  },
+  "validation": {
+    "required": "This field is required.",
+    "minLength": "Must be at least {min} characters.",
+    "maxLength": "Must be at most {max} characters.",
+    "email": "Enter a valid email address.",
+    "invalidValue": "This value isn't valid.",
+    "outOfRange": "Must be between {min} and {max}.",
+    "url": "Enter a valid link starting with http:// or https://.",
+    "mismatch": "This doesn't match."
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": {
+      "error": "Can't reach Injaz. Check your connection and try again."
+    },
+    "auth": {
+      "unauthorized": "Please sign in to continue.",
+      "forbidden": "You don't have permission to do that.",
+      "invalidCredentials": "The email or password is incorrect.",
+      "emailTaken": "An account with this email already exists.",
+      "invalidRefreshToken": "Your session has ended. Please sign in again.",
+      "refreshSuperseded": "Your session was refreshed in another tab. Please try again.",
+      "refreshTokenInactive": "Your session has ended. Please sign in again.",
+      "csrfHeaderMissing": "The request was blocked for security reasons. Reload the page."
+    },
+    "workspace": {
+      "notFound": "This workspace doesn't exist or you're no longer a member.",
+      "alreadyMember": "That person is already a member.",
+      "alreadyOwner": "They're already the owner.",
+      "cannotChangeOwnerRole": "The owner's role can't be changed. Transfer ownership instead.",
+      "cannotRemoveOwner": "The owner can't be removed. Transfer ownership first.",
+      "memberNotFound": "That person is no longer a member.",
+      "ownerRoleNotAssignable": "Use “Transfer ownership” to make someone the owner."
+    },
+    "invitation": {
+      "notFound": "This invitation link isn't valid.",
+      "emailMismatch": "This invitation is for a different email address.",
+      "accepted": "This invitation has already been used.",
+      "revoked": "This invitation was revoked.",
+      "expired": "This invitation has expired."
+    },
+    "board": { "notFound": "This board doesn't exist or you don't have access to it." },
+    "list": { "notFound": "This list no longer exists." },
+    "card": { "notFound": "This card no longer exists." },
+    "label": { "notFound": "This label no longer exists." },
+    "checklistItem": { "notFound": "This checklist item no longer exists." },
+    "comment": {
+      "notFound": "This comment no longer exists.",
+      "notAuthor": "You can only edit your own comments."
+    },
+    "member": { "notFound": "That person isn't a member of this workspace." },
+    "user": { "notFound": "That account doesn't exist." },
+    "conflict": {
+      "concurrency": "Someone else changed this at the same time. Refresh and try again.",
+      "duplicate": "That already exists."
+    },
+    "ordering": {
+      "staleNeighbor": "The board changed while you were moving things. It has been refreshed."
+    },
+    "request": {
+      "invalid": "The request couldn't be read. Reload the page and try again.",
+      "rateLimited": "Too many attempts. Wait a minute and try again.",
+      "methodNotAllowed": "That action isn't supported.",
+      "unsupportedMediaType": "That request format isn't supported."
+    },
+    "server": {
+      "error": "Something went wrong on our side. Please try again."
+    },
+    "validation": {
+      "failed": "Please fix the highlighted fields."
+    }
+  }
+}
