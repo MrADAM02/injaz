@@ -134,7 +134,7 @@ async function toggle(task: MyTask) {
           <UiIcon v-else :name="task.card.completedAt ? 'checkCircle' : 'circle'" :size="22" />
         </button>
         <NuxtLink :to="`/b/${task.boardId}/c/${task.card.id}`" class="min-w-0 flex-1 rounded-lg py-1.5">
-          <span class="block wrap-break-word text-sm font-medium" :class="{ 'text-muted line-through': task.card.completedAt }" dir="auto">{{ task.card.title }}</span>
+          <span class="block wrap-break-word text-match-parent text-sm font-medium" :class="{ 'text-muted line-through': task.card.completedAt }" dir="auto">{{ task.card.title }}</span>
           <span class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
             <span class="inline-flex min-w-0 items-center gap-1.5">
               <span class="size-2.5 shrink-0 rounded-full" :class="paletteFill(task.boardColor)" aria-hidden="true" />

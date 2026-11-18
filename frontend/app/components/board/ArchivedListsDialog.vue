@@ -78,7 +78,7 @@ async function remove(list: ArchivedList) {
     <ul v-else class="-mx-5 divide-y divide-line">
       <li v-for="list in items" :key="list.id" class="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3">
         <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-medium" dir="auto">{{ list.title }}</p>
+          <p class="truncate text-match-parent text-sm font-medium" dir="auto">{{ list.title }}</p>
           <p class="text-xs text-muted">{{ t('list.cardCount', list.cardCount) }}</p>
         </div>
         <div v-if="canEdit || canDelete" class="flex items-center gap-1">

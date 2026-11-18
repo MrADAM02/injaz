@@ -79,7 +79,7 @@ async function restore(result: CardSearchResult) {
       <ul v-else class="-mx-5 divide-y divide-line">
         <li v-for="result in results.items.value" :key="result.card.id" class="flex items-center gap-3 px-5 py-2.5">
           <NuxtLink :to="props.cardLink(result.card.id)" class="min-w-0 flex-1 rounded-lg py-1 hover:text-accent-strong" @click="open = false">
-            <span class="block truncate text-sm font-medium" dir="auto">{{ result.card.title }}</span>
+            <span class="block truncate text-match-parent text-sm font-medium" dir="auto">{{ result.card.title }}</span>
             <span class="block truncate text-xs text-muted">
               {{ t('search.inList', { list: result.listTitle }) }} · {{ format.relative(result.updatedAt) }}
             </span>

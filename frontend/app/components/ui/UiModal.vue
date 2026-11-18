@@ -59,7 +59,7 @@ const full = 'max-sm:mt-0 max-sm:h-dvh max-sm:max-h-dvh max-sm:rounded-none'
       <div v-if="!props.fullscreen" class="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-line sm:hidden" aria-hidden="true" />
       <header class="flex shrink-0 items-start gap-3 px-5 pb-2 pt-3 sm:pt-5">
         <div class="min-w-0 flex-1">
-          <h2 :id="titleId" class="text-lg font-semibold leading-snug" :class="{ 'sr-only': props.hideTitle }" dir="auto">{{ props.title }}</h2>
+          <h2 :id="titleId" class="text-match-parent text-lg font-semibold leading-snug" :class="{ 'sr-only': props.hideTitle }" dir="auto">{{ props.title }}</h2>
           <slot name="header" />
           <p v-if="props.description" class="mt-1 text-sm text-muted">{{ props.description }}</p>
         </div>

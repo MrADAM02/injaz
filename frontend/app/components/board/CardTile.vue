@@ -30,7 +30,7 @@ const checklistDone = computed(() => props.card.checklistTotal > 0 && props.card
 
     <p class="flex items-start gap-1.5 text-sm font-medium leading-snug" :class="{ 'text-muted line-through decoration-1': completed }">
       <UiIcon v-if="completed" name="checkCircle" :size="16" class="mt-0.5 text-success" />
-      <span class="min-w-0 break-words" dir="auto">{{ props.card.title }}</span>
+      <span class="min-w-0 break-words text-match-parent" dir="auto">{{ props.card.title }}</span>
     </p>
 
     <div

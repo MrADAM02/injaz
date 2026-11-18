@@ -72,6 +72,16 @@
   bottom: env(safe-area-inset-bottom);
 }
 
+/*
+ * For block-level user text with dir="auto": the text keeps its own direction (word order, which side the
+ * ellipsis cuts), but lines up with the page like its neighbours instead of jumping to the other side.
+ * Chromium only knows the prefixed value; Firefox only the standard one; Safari both. Keep both, in this order.
+ */
+@utility text-match-parent {
+  text-align: -webkit-match-parent;
+  text-align: match-parent;
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;

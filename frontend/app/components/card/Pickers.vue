@@ -34,7 +34,7 @@ const options = computed(() =>
           >
           <UiAvatar v-if="option.member" :name="option.member.displayName" :src="option.member.avatarUrl" size="sm" />
           <span v-else-if="option.label_" class="h-7 w-10 shrink-0 rounded-md" :class="paletteSwatch(option.label_.color)" aria-hidden="true" />
-          <span class="min-w-0 flex-1 truncate text-sm" dir="auto">{{ option.label }}</span>
+          <span class="min-w-0 flex-1 truncate text-match-parent text-sm" dir="auto">{{ option.label }}</span>
           <UiSpinner v-if="props.pending === option.id" :size="16" />
         </label>
       </li>
