@@ -20,6 +20,8 @@ RUN dotnet publish src/Injaz.Api/Injaz.Api.csproj -c Release -o /app --no-restor
 # "-extra" adds ICU + tzdata (time zones for due dates, culture-aware formatting).
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra AS runtime
 WORKDIR /app
+# Lets the deploy prune only old Injaz images on a server shared with other projects.
+LABEL org.opencontainers.image.source="https://github.com/MrADAM02/injaz"
 COPY --from=build /app .
 
 ENV ASPNETCORE_HTTP_PORTS=8080

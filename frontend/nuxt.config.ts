@@ -6,7 +6,7 @@ const devApiTarget = process.env.INJAZ_DEV_API ?? 'http://localhost:8080'
 export default defineNuxtConfig({
   compatibilityDate: '2026-11-01',
 
-  // A static SPA (Cloudflare Pages). All data comes from the API at runtime.
+  // A static SPA (Netlify, see netlify.toml). All data comes from the API at runtime.
   ssr: false,
 
   modules: ['@pinia/nuxt', '@nuxtjs/i18n'],
@@ -26,7 +26,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       // Empty = same origin (the dev proxy below, or a reverse proxy that serves both).
-      // Production on Cloudflare Pages: NUXT_PUBLIC_API_BASE=https://api.<domain> at build time.
+      // Production: NUXT_PUBLIC_API_BASE=https://injaz-api.jab-eri.org at build time (set in netlify.toml).
       apiBase: '',
     },
   },

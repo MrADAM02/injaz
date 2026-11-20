@@ -152,6 +152,9 @@ login when the iteration count is raised.
 | `Auth:RefreshCookie:Secure` | `true` | `false` in Development (plain-http localhost). |
 | `Cors:AllowedOrigins` | `[]` | Development: `http://localhost:3040`. |
 | `RateLimiting:CredentialsPermitLimit` / `CredentialsWindow` | `10` / `00:01:00` | Per client IP. |
+| `ReverseProxy:TrustedNetworks` | `[]` | CIDRs allowed to set the client IP/scheme via `X-Forwarded-For`/`-Proto`. Production: the private ranges (see [Deployment](#deployment)). |
+| `Invitations:FrontendBaseUrl` | *(empty)* | Base of invite links. Production fails at startup without it and without `Cors:AllowedOrigins:0`. |
+| `Database:MigrateOnStartup` | `false` | `true` in Development and Production (single instance). |
 
 ## Workspaces, members & invitations
 
@@ -397,9 +400,9 @@ for that change's event, because it has already applied the change optimisticall
 
 ## Frontend (Nuxt 4 SPA)
 
-`ssr: false`, built with `nuxt generate` into static files (`.output/public`) for Cloudflare Pages. All data
-comes from the API at runtime. Set `NUXT_PUBLIC_API_BASE=https://api.<domain>` at build time (empty means
-same origin).
+`ssr: false`, built with `nuxt generate` into static files (`.output/public`) and hosted on Netlify (see
+[Deployment](#deployment)). All data comes from the API at runtime. `NUXT_PUBLIC_API_BASE` sets the API at build
+time (empty means same origin, e.g. the dev proxy).
 
 ```
 frontend/
@@ -497,3 +500,62 @@ sources has a translation, and that both locale files have the same keys and pla
   - Selects are native, so phones show their own picker.
 - **Locale preference.** It is stored on the profile and follows the user to every device. When signed out, the
   last choice on this device is used, with Arabic as the default.
+
+## Deployment
+
+| Part | Where | How it updates |
+|---|---|---|
+| Frontend | Netlify, at `https://injaz.jab-eri.org` | Netlify builds `frontend/` on every push to `main` ([netlify.toml](netlify.toml)). |
+| API + PostgreSQL | The Hetzner server, `/opt/injaz`, at `https://injaz-api.jab-eri.org` | [Backend workflow](.github/workflows/backend.yml): test → image `ghcr.io/mradam02/injaz-api:sha-…` → SSH deploy. |
+
+The frontend **must** stay on a `jab-eri.org` subdomain: the refresh cookie is `SameSite=Strict` and host-only on
+the API, so browsers only send it from the same site. On a `*.netlify.app` address people would be signed out
+on every reload.
+
+### The server
+
+The server also runs other live projects, so Injaz follows their conventions and stays in its own lane:
+
+- [deploy/docker-compose.yml](deploy/docker-compose.yml) → `/opt/injaz/docker-compose.yml`. The API listens on
+  `127.0.0.1:5003` only; PostgreSQL has no published port. Memory/CPU limits (API 384 MB, PostgreSQL 256 MB, one
+  CPU each) and rotated logs keep it from starving the other projects or filling the disk.
+- [deploy/.env.example](deploy/.env.example) → `/opt/injaz/.env` (`chmod 600`), with secrets from `openssl rand -hex`.
+- [deploy/nginx/injaz-api.jab-eri.org.conf](deploy/nginx/injaz-api.jab-eri.org.conf) → the host nginx, with TLS from
+  certbot like the other sites. `/hubs/` gets WebSocket headers and no access log (tokens travel in its query string).
+- Migrations run when the API starts (`appsettings.Production.json`).
+- The API trusts `X-Forwarded-For` only from private networks (nginx reaches the container through Docker's
+  bridge). That is safe because the port is bound to `127.0.0.1`: nothing outside the server can reach it directly.
+
+### First deploy (manual, once)
+
+1. **DNS (Cloudflare, DNS only):** `A injaz-api → 91.98.168.57`; later `CNAME injaz → <site>.netlify.app`.
+2. **Image:** merge to `main`; the Backend workflow publishes `ghcr.io/mradam02/injaz-api:latest` and `:sha-…`.
+3. **Server:**
+   ```bash
+   sudo mkdir -p /opt/injaz && sudo chown "$USER": /opt/injaz && cd /opt/injaz
+   # copy deploy/docker-compose.yml here, and deploy/.env.example as .env; fill it in
+   chmod 600 .env
+   docker compose pull && docker compose up -d
+   curl -s http://127.0.0.1:5003/health          # → Healthy
+   ```
+4. **nginx + TLS:**
+   ```bash
+   sudo cp injaz-api.jab-eri.org.conf /etc/nginx/sites-available/
+   sudo ln -s /etc/nginx/sites-available/injaz-api.jab-eri.org.conf /etc/nginx/sites-enabled/
+   sudo nginx -t && sudo systemctl reload nginx  # never reload if -t fails: other sites share this nginx
+   sudo certbot --nginx -d injaz-api.jab-eri.org
+   curl -s https://injaz-api.jab-eri.org/health  # → Healthy
+   ```
+5. **Netlify:** import the GitHub repo and leave the build fields empty (`netlify.toml` provides them). Add the
+   custom domain `injaz.jab-eri.org` and let Netlify issue its certificate.
+6. **Automatic deploys:** in the GitHub repo add the secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` (as for
+   TrainingPlatform) and the variable `DEPLOY_ENABLED=true`. From then on every backend push to `main` deploys and
+   then checks `/health`.
+
+### Operations
+
+- **Logs:** `cd /opt/injaz && docker compose logs -f api` (JSON lines).
+- **Roll back:** `API_VERSION=sha-<older commit> docker compose up -d`.
+- **Backup:** `docker compose exec -T postgres pg_dump -U injaz -Fc injaz > injaz-$(date +%F).dump`; restore with
+  `pg_restore -U injaz -d injaz --clean` inside the container.
+

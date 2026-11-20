@@ -40,6 +40,7 @@ internal static class ApiServiceCollectionExtensions
 
         services.AddApiSecurity(configuration);
         services.AddApiRateLimiting(configuration);
+        services.AddReverseProxySupport(configuration);
 
         services.AddHttpContextAccessor();
         services.AddScoped<CallerPrincipal>();

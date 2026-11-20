@@ -23,8 +23,8 @@ public sealed class RateLimitingOptions
 internal static class RateLimitingSetup
 {
     /// <remarks>
-    /// Partitioned by client IP. Behind the reverse proxy this relies on forwarded headers (configured in phase 8);
-    /// until then every request shares the proxy's IP.
+    /// Partitioned by client IP. Behind the reverse proxy the IP comes from X-Forwarded-For, which is only honoured
+    /// from <c>ReverseProxy:TrustedNetworks</c> (see <see cref="ReverseProxySetup"/>).
     /// </remarks>
     public static IServiceCollection AddApiRateLimiting(this IServiceCollection services, IConfiguration configuration)
     {
