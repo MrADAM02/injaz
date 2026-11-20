@@ -535,7 +535,8 @@ The server also runs other live projects, so Injaz follows their conventions and
    sudo mkdir -p /opt/injaz && sudo chown "$USER": /opt/injaz && cd /opt/injaz
    # copy deploy/docker-compose.yml here, and deploy/.env.example as .env; fill it in
    chmod 600 .env
-   docker compose pull && docker compose up -d
+   # The image is public: pull anonymously, so the server's shared ghcr.io login (used by other projects) never matters
+   DOCKER_CONFIG=$(mktemp -d) docker compose pull && docker compose up -d
    curl -s http://127.0.0.1:5003/health          # → Healthy
    ```
 4. **nginx + TLS:**

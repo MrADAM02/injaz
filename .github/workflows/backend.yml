@@ -91,7 +91,8 @@ jobs:
             set -e
             cd /opt/injaz
             export API_VERSION=sha-${{ github.sha }}
-            docker compose pull api
+            # The image is public: pull anonymously (empty config), independent of the server's shared ghcr.io login.
+            DOCKER_CONFIG=$(mktemp -d) docker compose pull api
             docker compose up -d --remove-orphans
             # Only Injaz's own old images: the server runs other projects.
             docker image prune -f --filter "label=org.opencontainers.image.source=https://github.com/MrADAM02/injaz"
